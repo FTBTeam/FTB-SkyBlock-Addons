@@ -266,7 +266,7 @@ public class AutoHammerBlockEntity extends BlockEntity {
     public <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
         Direction dir = this.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
 
-        if (cap == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY) {
+        if (cap == ForgeCapabilities.ITEM_HANDLER) {
             if (side == getInputDirection(dir)) {
                 return inputInvLazy.cast();
             } else if (side == getOutputDirection(dir)) {
