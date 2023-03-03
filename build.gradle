@@ -1,0 +1,155 @@
+plugins {
+    id "dev.architectury.loom" version "0.12.0-SNAPSHOT"
+    id "maven-publish"
+	id "com.matthewprenger.cursegradle" version "1.4.0"
+}
+
+sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
+
+def ENV = System.getenv()
+
+archivesBaseName = project.archives_base_name
+version = "${project.mod_version}+mc${project.minecraft_version}"
+group = project.maven_group
+
+loom {
+    silentMojangMappingsLicense()
+
+    forge {
+        mixinConfigs = [
+//                "ftbsba.mixins.json"
+        ]
+
+        dataGen {
+            mod project.mod_id
+        }
+    }
+
+    launches {
+        data {
+            arg "--existing", file("src/main/resources").absolutePath
+        }
+    }
+}
+
+repositories {
+    maven { url "https://www.cursemaven.com" }
+    maven { url "https://maven.saps.dev/releases" }
+    maven { url "https://maven.shedaniel.me/" }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+
+    mappings loom.officialMojangMappings()
+
+    forge "net.minecraftforge:forge:${project.forge_version}"
+
+    modImplementation "curse.maven:jei-238222:${jei_file}"
+    modImplementation "dev.latvian.mods:kubejs-forge:${kubejs_version}"
+    modImplementation "dev.latvian.mods:rhino-forge:${rhino_version}"
+
+    modImplementation ("curse.maven:jade-324717:${jade_version}")
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+    options.release = 17
+}
+
+java {
+    withSourcesJar()
+}
+
+jar {
+    manifest {
+        attributes([
+                "Specification-Title"     : project.mod_id,
+                "Specification-Vendor"    : project.mod_author,
+                "Specification-Version"   : "1",
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : version,
+                "Implementation-Vendor"   : project.mod_author,
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+}
+
+def relType = "release"
+if (ENV.TAG != null) {
+	if (ENV.TAG.contains("alpha")) {
+		relType = "alpha"
+	} else if (ENV.TAG.contains("beta")) {
+		relType = "beta"
+	}
+}
+
+if (ENV.CURSEFORGE_KEY) {
+	curseforge {
+		apiKey = ENV.CURSEFORGE_KEY
+		project {
+			id = project.curseforge_id
+			releaseType = relType
+			addGameVersion "Forge"
+			addGameVersion project.minecraft_version
+			mainArtifact(remapJar.archiveFile)
+			relations {
+				requiredDependency 'ftb-library-forge'
+				optionalDependency 'jade'
+			}
+			changelog = ENV.CHANGELOG  // expected to exist if ENV.CURSEFORGE does
+			changelogType = 'markdown'
+		}
+	}
+}
+
+def ftbURL = "https://maven.ftb.dev/release"
+def sapsURL = "https://maven.saps.dev/releases"
+def mavenVersion = project.version
+if (ENV.SNAPSHOT != null && ENV.SNAPSHOT == "true") {
+	ftbURL = "https://maven.ftb.dev/snapshot"
+	mavenVersion += "-SNAPSHOT"
+}
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			groupId = project.group
+      artifactId = project.archivesBaseName
+      version = mavenVersion
+
+			artifact(remapJar) {
+				builtBy remapJar
+			}
+		}
+	}
+
+	repositories {
+		if (ENV.FTB_MAVEN_TOKEN) {
+			maven {
+				url ftbURL
+				credentials {
+					username = "ftb"
+					password = "${ENV.FTB_MAVEN_TOKEN}"
+				}
+			}
+		}
+
+		if (ENV.SAPS_TOKEN) {
+			maven {
+				url sapsURL
+				credentials {
+					username = "ftb"
+					password = "${ENV.SAPS_TOKEN}"
+				}
+			}
+		}
+	}
+}

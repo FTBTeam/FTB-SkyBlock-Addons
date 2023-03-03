@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[43,)"
+license = "All rights reserved"
+
+[[mods]]
+  modId = "ftbsba"
+  version = "${version}"
+  displayName = "FTB Skyblock Addons"
+  description = '''
+  Addons for a typical Skeyblock
+  '''
+
+[[dependencies.ftbsba]]
+  modId = "forge"
+  mandatory = true
+  versionRange = "[40,)"
+  ordering = "NONE"
+  side = "BOTH"
+
+[[dependencies.ftbsba]]
+  modId = "kubejs"
+  mandatory = true
+  versionRange = "[1802.5.5-build.546,1900)"
+  ordering = "NONE"
+  side = "BOTH"
+
+[[dependencies.ftbsba]]
+  modId = "minecraft"
+  mandatory = true
+  versionRange = "[1.19.2,1.20)"
+  ordering = "NONE"
+  side = "BOTH"
