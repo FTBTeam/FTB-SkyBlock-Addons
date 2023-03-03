@@ -3,29 +3,31 @@ package dev.ftb.ftbsba.tools.integration.kubejs;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dev.latvian.mods.kubejs.item.ItemStackJS;
-import dev.latvian.mods.kubejs.recipe.RecipeJS;
+import dev.latvian.mods.kubejs.recipe.*;
 import dev.latvian.mods.kubejs.util.ListJS;
+import net.minecraft.world.item.ItemStack;
 
-public class HammerRecipeJS extends RecipeJS {
 
-	@Override
-	public void create(ListJS args) {
-		this.inputItems.add(this.parseIngredientItem(args.get(0)));
+public class HammerRecipeJS extends SBARecipeJS {
+
+
+    @Override
+	public void create(RecipeArguments args) {
+		this.inputItems.add(this.parseItemInput(args.get(0)));
 
 		for (Object o : ListJS.orSelf(args.get(1))) {
-			ItemStackJS i = this.parseResultItem(o);
+			ItemStack i = this.parseItemOutput(o);
 			this.outputItems.add(i);
 		}
 	}
 
 	@Override
 	public void deserialize() {
-		this.inputItems.add(this.parseIngredientItem(this.json.get("ingredient")));
+		this.inputItems.add(this.parseItemInput(this.json.get("ingredient")));
 
 		for (JsonElement e : this.json.get("results").getAsJsonArray()) {
 			JsonObject o = e.getAsJsonObject();
-			this.outputItems.add(this.parseResultItem(o));
+			this.outputItems.add(this.parseItemOutput(o));
 		}
 	}
 
@@ -34,8 +36,8 @@ public class HammerRecipeJS extends RecipeJS {
 		if (this.serializeOutputs) {
 			JsonArray array = new JsonArray();
 
-			for (ItemStackJS o : this.outputItems) {
-				array.add(o.toResultJson());
+			for (ItemStack o : this.outputItems) {
+				array.add(itemToJson(o));
 			}
 
 			this.json.add("results", array);
@@ -45,4 +47,6 @@ public class HammerRecipeJS extends RecipeJS {
 			this.json.add("ingredient", this.inputItems.get(0).toJson());
 		}
 	}
+
+
 }

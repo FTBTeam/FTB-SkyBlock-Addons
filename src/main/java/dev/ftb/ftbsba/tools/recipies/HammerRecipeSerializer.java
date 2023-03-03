@@ -9,9 +9,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.minecraftforge.registries.ForgeRegistryEntry;
 
-public class HammerRecipeSerializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<HammerRecipe> {
+public class HammerRecipeSerializer implements RecipeSerializer<HammerRecipe> {
     @Override
     public HammerRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
         HammerRecipe r = new HammerRecipe(recipeId, json.has("group") ? json.get("group").getAsString() : "");

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "h": {
+      "item": "minecraft:cobblestone"
+    },
+    "r": {
+      "item": "ftbsba:stone_rod"
+    }
+  },
+  "pattern": [
+    "hrh",
+    " r ",
+    " r "
+  ],
+  "result": {
+    "item": "ftbsba:stone_hammer"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "key": {
+    "R": {
+      "item": "ftbsba:stone_rod"
+    }
+  },
+  "pattern": [
+    "RR ",
+    " R ",
+    " R "
+  ],
+  "result": {
+    "item": "ftbsba:stone_crook"
+  }
+}

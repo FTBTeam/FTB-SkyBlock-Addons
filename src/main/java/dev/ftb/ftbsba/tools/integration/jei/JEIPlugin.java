@@ -1,8 +1,8 @@
 package dev.ftb.ftbsba.tools.integration.jei;
 
 import dev.ftb.ftbsba.FTBSBA;
-import dev.ftb.ftbsba.FTBStoneBlock;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.recipies.CrookRecipe;
 import dev.ftb.ftbsba.tools.recipies.NoInventory;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -58,8 +58,8 @@ public class JEIPlugin implements IModPlugin {
     @Override
     public void registerRecipes(IRecipeRegistration r) {
         Level level = Minecraft.getInstance().level;
-        r.addRecipes(level.getRecipeManager().getRecipesFor(ToolsRegistry.HAMMER_RECIPE_TYPE.get(), NoInventory.INSTANCE, level), HammerCategory.ID);
-        r.addRecipes(level.getRecipeManager().getRecipesFor(ToolsRegistry.CROOK_RECIPE_TYPE.get(), NoInventory.INSTANCE, level), CrookCategory.ID);
+        r.addRecipes(HammerCategory.TYPE, level.getRecipeManager().getRecipesFor(ToolsRegistry.HAMMER_RECIPE_TYPE.get(), NoInventory.INSTANCE, level));
+        r.addRecipes(CrookCategory.TYPE, level.getRecipeManager().getRecipesFor(ToolsRegistry.CROOK_RECIPE_TYPE.get(), NoInventory.INSTANCE, level));
 
         // CauldronRecipe crap
         FluidStack out = new FluidStack(Fluids.WATER, 333);
@@ -85,7 +85,7 @@ public class JEIPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration r) {
-        HAMMERS.forEach(hammer -> r.addRecipeCatalyst(new ItemStack(hammer.get()), HammerCategory.ID));
-        CROOKS.forEach(crook -> r.addRecipeCatalyst(new ItemStack(crook.get()), CrookCategory.ID));
+        HAMMERS.forEach(hammer -> r.addRecipeCatalyst(new ItemStack(hammer.get()), HammerCategory.TYPE));
+        CROOKS.forEach(crook -> r.addRecipeCatalyst(new ItemStack(crook.get()), CrookCategory.TYPE));
     }
 }

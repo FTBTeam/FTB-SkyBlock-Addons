@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -51,8 +52,8 @@ public class HammerOverlay {
             .build();
 
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGameOverlayEvent event) {
-        if (event.getType() != RenderGameOverlayEvent.ElementType.TEXT) {
+    public static void onRenderOverlay(RenderGuiOverlayEvent event) {
+        if (event.getOverlay().id().toString().equals("minecraft:chat_panel")) {
             return;
         }
 
@@ -66,7 +67,7 @@ public class HammerOverlay {
             return;
         }
 
-        HitResult pick = player.pick(ForgeMod.REACH_DISTANCE.get().getDefaultValue(), event.getPartialTicks(), false);
+        HitResult pick = player.pick(ForgeMod.REACH_DISTANCE.get().getDefaultValue(), event.getPartialTick(), false);
         if (!(pick instanceof BlockHitResult blockHit)) {
             return;
         }
@@ -94,7 +95,7 @@ public class HammerOverlay {
         int x = (window.getGuiScaledWidth() / 2) - (58 / 2);
         int y = window.getGuiScaledHeight() - 80;
 
-        var pose = event.getMatrixStack();
+        var pose = event.getPoseStack();
         pose.pushPose();
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);

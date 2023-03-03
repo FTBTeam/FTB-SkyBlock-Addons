@@ -1,10 +1,12 @@
 package dev.ftb.ftbsba.tools.loot;
 
-import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.ftb.ftbsba.tools.ToolsTags;
 import dev.ftb.ftbsba.tools.recipies.CrookDropsResult;
 import dev.ftb.ftbsba.tools.recipies.ToolsRecipeCache;
-import net.minecraft.resources.ResourceLocation;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -12,23 +14,25 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
+import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 public class CrookModifier extends LootModifier {
+
+    public static final Codec<CrookModifier> CODEC = RecordCodecBuilder.create((builder) -> codecStart(builder).apply(builder, CrookModifier::new));
+
     public CrookModifier(LootItemCondition[] conditionsIn) {
         super(conditionsIn);
     }
 
     @NotNull
     @Override
-    protected List<ItemStack> doApply(List<ItemStack> list, LootContext context) {
+    protected ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> list, LootContext context) {
         ItemStack crook = context.getParamOrNull(LootContextParams.TOOL);
         Entity entity = context.getParamOrNull(LootContextParams.THIS_ENTITY);
         BlockState blockState = context.getParamOrNull(LootContextParams.BLOCK_STATE);
@@ -39,7 +43,7 @@ public class CrookModifier extends LootModifier {
 
         CrookDropsResult crookDrops = ToolsRecipeCache.getCrookDrops(entity.level, new ItemStack(blockState.getBlock()));
         if (crookDrops.items().size() > 0) {
-            Random random = context.getRandom();
+            RandomSource random = context.getRandom();
 
             List<ItemStack> collect = crookDrops
                     .items()
@@ -49,21 +53,15 @@ public class CrookModifier extends LootModifier {
                     .collect(Collectors.toList());
 
             Collections.shuffle(collect);
-            return collect.stream().limit(crookDrops.max()).toList();
+            list.clear();
+            collect.stream().limit(crookDrops.max()).forEach(list::add);
         }
 
         return list;
     }
 
-    public static class Serializer extends GlobalLootModifierSerializer<CrookModifier> {
-        @Override
-        public CrookModifier read(ResourceLocation location, JsonObject object, LootItemCondition[] conditions) {
-            return new CrookModifier(conditions);
-        }
-
-        @Override
-        public JsonObject write(CrookModifier instance) {
-            return this.makeConditions(instance.conditions);
-        }
+    @Override
+    public Codec<? extends IGlobalLootModifier> codec() {
+        return CODEC;
     }
 }

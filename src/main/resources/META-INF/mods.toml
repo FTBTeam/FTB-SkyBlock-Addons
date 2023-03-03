@@ -20,7 +20,7 @@ license = "All rights reserved"
 [[dependencies.ftbsba]]
   modId = "kubejs"
   mandatory = true
-  versionRange = "[1802.5.5-build.546,1900)"
+  versionRange = "[1902.6.0-build.142,2000)"
   ordering = "NONE"
   side = "BOTH"
 

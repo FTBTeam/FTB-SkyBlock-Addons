@@ -1,7 +1,6 @@
 package dev.ftb.ftbsba.tools;
 
 import dev.ftb.ftbsba.FTBSBA;
-import dev.ftb.ftbsba.FTBStoneBlock;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;

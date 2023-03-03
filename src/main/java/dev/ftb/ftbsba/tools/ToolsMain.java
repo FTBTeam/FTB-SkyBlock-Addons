@@ -58,7 +58,7 @@ public class ToolsMain {
         // Cauldron Interactions
         for (Block block : ForgeRegistries.BLOCKS) {
             if (block instanceof LeavesBlock || block instanceof SaplingBlock) {
-                LOGGER.info("Registering new cauldron interaction for {} [{}]", block.getName().getString(), block.getRegistryName());
+                LOGGER.info("Registering new cauldron interaction for {} [{}]", block.getName().getString(), ForgeRegistries.BLOCKS.getKey(block));
                 Item item = block.asItem();
 
                 if (item != Items.AIR) {

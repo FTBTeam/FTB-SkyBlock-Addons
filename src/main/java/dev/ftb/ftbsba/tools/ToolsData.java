@@ -57,20 +57,20 @@ public class ToolsData {
         if (event.includeClient()) {
             SMBlockModels blockModels = new SMBlockModels(gen, MODID, event.getExistingFileHelper());
 
-            gen.addProvider(blockModels);
-            gen.addProvider(new SMLang(gen, MODID, "en_us"));
-            gen.addProvider(new SMItemModels(gen, MODID, event.getExistingFileHelper()));
-            gen.addProvider(new SMBlockStateModels(gen, MODID, event.getExistingFileHelper(), blockModels));
+            gen.addProvider(true, blockModels);
+            gen.addProvider(true, new SMLang(gen, MODID, "en_us"));
+            gen.addProvider(true, new SMItemModels(gen, MODID, event.getExistingFileHelper()));
+            gen.addProvider(true, new SMBlockStateModels(gen, MODID, event.getExistingFileHelper(), blockModels));
         }
 
         if (event.includeServer()) {
             SMBlockTags blockTags = new SMBlockTags(gen, event.getExistingFileHelper());
 
-            gen.addProvider(blockTags);
-            gen.addProvider(new SMItemTags(gen, blockTags, event.getExistingFileHelper()));
-            gen.addProvider(new SMRecipes(gen));
-            gen.addProvider(new SMLootTableProvider(gen));
-            gen.addProvider(new SMLootModifiers(gen));
+            gen.addProvider(true, blockTags);
+            gen.addProvider(true, new SMItemTags(gen, blockTags, event.getExistingFileHelper()));
+            gen.addProvider(true, new SMRecipes(gen));
+            gen.addProvider(true, new SMLootTableProvider(gen));
+            gen.addProvider(true, new SMLootModifiers(gen));
         }
     }
 
@@ -81,11 +81,11 @@ public class ToolsData {
 
         @Override
         protected void start() {
-            this.add("crook_loot_modifier", ToolsRegistry.CROOK_LOOT_MODIFIER.get(), new CrookModifier(new LootItemCondition[]{
+            this.add("crook_loot_modifier", new CrookModifier(new LootItemCondition[] {
                     MatchTool.toolMatches(ItemPredicate.Builder.item().of(ToolsTags.Items.CROOKS)).build()
             }));
 
-            this.add("hammer_loot_modifier", ToolsRegistry.HAMMER_LOOT_MODIFIER.get(), new HammerModifier(new LootItemCondition[]{
+            this.add("hammer_loot_modifier", new HammerModifier(new LootItemCondition[] {
                     MatchTool.toolMatches(ItemPredicate.Builder.item().of(ToolsTags.Items.HAMMERS)).build()
             }));
         }
@@ -112,23 +112,25 @@ public class ToolsData {
             this.addBlock(ToolsRegistry.DIAMOND_AUTO_HAMMER, "Diamond Auto-hammer");
             this.addBlock(ToolsRegistry.NETHERITE_AUTO_HAMMER, "Netherite Auto-hammer");
 
-            this.add("screens.ftbsbc.select_start_group", "Select a group");
-            this.add("screens.ftbsbc.select_start", "Select a start");
-            this.add("screens.ftbsbc.selected_start", "Selected start");
-            this.add("screens.ftbsbc.by", "By: %s");
-            this.add("screens.ftbsbc.back", "Back");
-            this.add("screens.ftbsbc.create", "Create");
-            this.add("screens.ftbsbc.select", "Select");
-            this.add("screens.ftbsbc.close", "Close");
+            this.add("screens.ftbsba.select_start_group", "Select a group");
+            this.add("screens.ftbsba.select_start", "Select a start");
+            this.add("screens.ftbsba.selected_start", "Selected start");
+            this.add("screens.ftbsba.by", "By: %s");
+            this.add("screens.ftbsba.back", "Back");
+            this.add("screens.ftbsba.create", "Create");
+            this.add("screens.ftbsba.select", "Select");
+            this.add("screens.ftbsba.close", "Close");
 
-            this.add("ftbsbc.tooltip.fireplow", "Hold right click whilst looking at Stone to create lava");
-            this.add("ftbsbc.tooltip.hammers", "Crushes materials down to their core components");
-            this.add("ftbsbc.tooltip.auto-hammers", "Automatically crushes materials down using the hammer based on the tier of hammer");
+            this.add("ftbsba.tooltip.fireplow", "Hold right click whilst looking at Stone to create lava");
+            this.add("ftbsba.tooltip.hammers", "Crushes materials down to their core components");
+            this.add("ftbsba.tooltip.auto-hammers", "Automatically crushes materials down using the hammer based on the tier of hammer");
 
-            this.add("ftbsbc.jade.waiting", "Waiting for input: %s ticks");
-            this.add("ftbsbc.jade.processing", "Processing: %s/%s");
-            this.add("ftbsbc.jade.input", "Input");
-            this.add("ftbsbc.jade.buffer", "Buffer");
+            this.add("ftbsba.jade.waiting", "Waiting for input: %s ticks");
+            this.add("ftbsba.jade.processing", "Processing: %s/%s");
+            this.add("ftbsba.jade.input", "Input");
+            this.add("ftbsba.jade.buffer", "Buffer");
+
+            this.add("config.jade.plugin_ftbsba.blocks", "FTB Skyblock Addons Blocks");
         }
     }
 

@@ -2,7 +2,7 @@ package dev.ftb.ftbsba.config;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
-public class FTBSBConfig {
+public class FTBSAConfig {
     public static final ForgeConfigSpec.Builder COMMON_BUILDER = new ForgeConfigSpec.Builder();
     public static final ForgeConfigSpec COMMON_CONFIG;
 

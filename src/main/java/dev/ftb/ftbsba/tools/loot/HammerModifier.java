@@ -1,8 +1,11 @@
 package dev.ftb.ftbsba.tools.loot;
 
 import com.google.gson.JsonObject;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.ftb.ftbsba.tools.ToolsTags;
 import dev.ftb.ftbsba.tools.recipies.ToolsRecipeCache;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -11,21 +14,25 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.GlobalLootModifierSerializer;
+import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.common.loot.LootModifier;
+import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class HammerModifier extends LootModifier {
+
+    public static final Codec<HammerModifier> CODEC = RecordCodecBuilder.create((builder) -> codecStart(builder).apply(builder, HammerModifier::new));
+
     public HammerModifier(LootItemCondition[] conditionsIn) {
         super(conditionsIn);
     }
 
     @NotNull
     @Override
-    protected List<ItemStack> doApply(List<ItemStack> list, LootContext context) {
+    protected ObjectArrayList<ItemStack> doApply(ObjectArrayList<ItemStack> list, LootContext context) {
         ItemStack hammer = context.getParamOrNull(LootContextParams.TOOL);
         Entity entity = context.getParamOrNull(LootContextParams.THIS_ENTITY);
         BlockState blockState = context.getParamOrNull(LootContextParams.BLOCK_STATE);
@@ -36,21 +43,15 @@ public class HammerModifier extends LootModifier {
 
         List<ItemStack> hammerDrops = ToolsRecipeCache.getHammerDrops(entity.level, new ItemStack(blockState.getBlock()));
         if (hammerDrops.size() > 0) {
-            return hammerDrops.stream().map(ItemStack::copy).collect(Collectors.toList());
+            list.clear();
+            hammerDrops.stream().map(ItemStack::copy).forEach(list::add);
         }
 
         return list;
     }
 
-    public static class Serializer extends GlobalLootModifierSerializer<HammerModifier> {
-        @Override
-        public HammerModifier read(ResourceLocation location, JsonObject object, LootItemCondition[] conditions) {
-            return new HammerModifier(conditions);
-        }
-
-        @Override
-        public JsonObject write(HammerModifier instance) {
-            return this.makeConditions(instance.conditions);
-        }
+    @Override
+    public Codec<? extends IGlobalLootModifier> codec() {
+        return CODEC;
     }
 }

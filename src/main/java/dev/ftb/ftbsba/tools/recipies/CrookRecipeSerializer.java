@@ -9,7 +9,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 
-public class CrookRecipeSerializer extends ForgeRegistryEntry<RecipeSerializer<?>> implements RecipeSerializer<CrookRecipe> {
+public class CrookRecipeSerializer implements RecipeSerializer<CrookRecipe> {
     @Override
     public CrookRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
         CrookRecipe r = new CrookRecipe(recipeId, json.has("group") ? json.get("group").getAsString() : "");

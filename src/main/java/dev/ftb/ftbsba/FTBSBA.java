@@ -1,6 +1,6 @@
 package dev.ftb.ftbsba;
 
-import dev.ftb.ftbsba.config.FTBSBConfig;
+import dev.ftb.ftbsba.config.FTBSAConfig;
 import dev.ftb.ftbsba.tools.ToolsClient;
 import dev.ftb.ftbsba.tools.ToolsMain;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
@@ -21,7 +21,7 @@ public class FTBSBA {
     public static final String MOD_ID = "ftbsba";
 
     public FTBSBA() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, FTBSBConfig.COMMON_CONFIG);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, FTBSAConfig.COMMON_CONFIG);
 
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 

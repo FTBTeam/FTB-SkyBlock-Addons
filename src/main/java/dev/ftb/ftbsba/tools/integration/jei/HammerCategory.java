@@ -1,23 +1,21 @@
 package dev.ftb.ftbsba.tools.integration.jei;
 
 import dev.ftb.ftbsba.FTBSBA;
-import dev.ftb.ftbsba.FTBStoneBlock;
 import dev.ftb.ftbsba.tools.recipies.HammerRecipe;
-import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.gui.IRecipeLayout;
+import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.api.helpers.IGuiHelper;
-import mezz.jei.api.ingredients.IIngredients;
+import mezz.jei.api.recipe.IFocusGroup;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.Arrays;
-
 public class HammerCategory implements IRecipeCategory<HammerRecipe> {
-    public static final ResourceLocation ID = new ResourceLocation(FTBSBA.MOD_ID, "hammers_jei");
+    public static final RecipeType<HammerRecipe> TYPE = RecipeType.create(FTBSBA.MOD_ID, "hammers_jei", HammerRecipe.class);
+
     public static final ResourceLocation BACKGROUND = new ResourceLocation(FTBSBA.MOD_ID, "textures/gui/hammer_jei_background.png");
 
     private final IDrawableStatic background;
@@ -26,19 +24,15 @@ public class HammerCategory implements IRecipeCategory<HammerRecipe> {
         this.background = guiHelper.drawableBuilder(BACKGROUND, 0, 0, 156, 62).setTextureSize(180, 62).build();
     }
 
-    @Override
-    public ResourceLocation getUid() {
-        return ID;
-    }
 
     @Override
-    public Class<? extends HammerRecipe> getRecipeClass() {
-        return HammerRecipe.class;
+    public RecipeType<HammerRecipe> getRecipeType() {
+        return TYPE;
     }
 
     @Override
     public Component getTitle() {
-        return new TextComponent("Hammering");
+        return Component.literal("Hammering");
     }
 
     @Override
@@ -52,19 +46,12 @@ public class HammerCategory implements IRecipeCategory<HammerRecipe> {
     }
 
     @Override
-    public void setIngredients(HammerRecipe hammerRecipe, IIngredients iIngredients) {
-        iIngredients.setInputs(VanillaTypes.ITEM, Arrays.asList(hammerRecipe.ingredient.getItems()));
-        iIngredients.setOutputs(VanillaTypes.ITEM, hammerRecipe.results);
-    }
-
-    @Override
-    public void setRecipe(IRecipeLayout recipeLayout, HammerRecipe hammerRecipe, IIngredients iIngredients) {
-        recipeLayout.getItemStacks().init(0, true, 4, 4);
-        recipeLayout.getItemStacks().set(0, Arrays.asList(hammerRecipe.ingredient.getItems()));
+    public void setRecipe(IRecipeLayoutBuilder builder, HammerRecipe hammerRecipe, IFocusGroup iFocusGroup) {
+        builder.addSlot(RecipeIngredientRole.INPUT, 5, 5).addIngredients(hammerRecipe.ingredient);
 
         for (int i = 0; i < hammerRecipe.results.size(); i++) {
-            recipeLayout.getItemStacks().init(1 + i, false, 27 + (i % 7 * 18), 4 + i / 7 * 18);
-            recipeLayout.getItemStacks().set(1 + i, hammerRecipe.results.get(i));
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 28 + (i % 7 * 18), 5 + i / 7 * 18).addItemStack(hammerRecipe.results.get(i));
         }
     }
+
 }

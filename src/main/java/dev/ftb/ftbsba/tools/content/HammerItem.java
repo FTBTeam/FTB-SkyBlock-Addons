@@ -1,7 +1,7 @@
 package dev.ftb.ftbsba.tools.content;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.DiggerItem;
 import net.minecraft.world.item.ItemStack;
@@ -29,7 +29,7 @@ public class HammerItem extends DiggerItem {
 
     @Override
     public void appendHoverText(ItemStack arg, @Nullable Level arg2, List<Component> list, TooltipFlag arg3) {
-        list.add(new TranslatableComponent("ftbsbc.tooltip.hammers").gray());
+        list.add(Component.translatable("ftbsba.tooltip.hammers").withStyle(ChatFormatting.GRAY));
     }
 
     @Override

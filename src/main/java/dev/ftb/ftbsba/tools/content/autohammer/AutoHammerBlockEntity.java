@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
@@ -197,7 +198,7 @@ public class AutoHammerBlockEntity extends BlockEntity {
     private IItemHandler getExternalInventory(Direction direction) {
         BlockEntity blockEntity = level.getBlockEntity(worldPosition.relative(direction));
         if (blockEntity != null) {
-            return blockEntity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, direction.getOpposite()).orElse(EmptyHandler.INSTANCE);
+            return blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, direction.getOpposite()).orElse(EmptyHandler.INSTANCE);
         }
 
         return EmptyHandler.INSTANCE;

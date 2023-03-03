@@ -1,14 +1,15 @@
 package dev.ftb.ftbsba.tools.integration.jade;
 
+import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.content.autohammer.AutoHammerBlock;
 import dev.ftb.ftbsba.tools.content.autohammer.AutoHammerBlockEntity;
-import mcp.mobius.waila.api.*;
-import mcp.mobius.waila.api.config.IPluginConfig;
-import mcp.mobius.waila.api.ui.IElement;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Registry;
+import net.minecraft.data.BuiltinRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
@@ -16,17 +17,22 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.wrapper.EmptyHandler;
 import net.minecraftforge.registries.ForgeRegistries;
+import snownee.jade.api.*;
+import snownee.jade.api.config.IPluginConfig;
+import snownee.jade.api.ui.IElement;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @WailaPlugin
 public class SBCJadePlugin implements IWailaPlugin {
+
+    private static final ResourceLocation ID = new ResourceLocation(FTBSBA.MOD_ID, "blocks");
     @Override
     public void register(IWailaCommonRegistration registration) {
         registration.registerBlockDataProvider(AutoHammerComponentProvider.INSTANCE, AutoHammerBlockEntity.class);
@@ -34,10 +40,10 @@ public class SBCJadePlugin implements IWailaPlugin {
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerComponentProvider(AutoHammerComponentProvider.INSTANCE, TooltipPosition.BODY, AutoHammerBlock.class);
+        registration.registerBlockComponent(AutoHammerComponentProvider.INSTANCE, AutoHammerBlock.class);
     }
 
-    enum AutoHammerComponentProvider implements IComponentProvider, IServerDataProvider<BlockEntity> {
+    enum AutoHammerComponentProvider implements IBlockComponentProvider, IServerDataProvider<BlockEntity> {
         INSTANCE;
 
         @Override
@@ -71,7 +77,7 @@ public class SBCJadePlugin implements IWailaPlugin {
             if (!inputStack.isEmpty()) {
                 iTooltip.add(helper.item(inputStack));
                 ITooltip tooltip = helper.tooltip();
-                tooltip.append(helper.text(new TranslatableComponent("ftbsbc.jade.input")));
+                tooltip.append(helper.text(Component.translatable("ftbsba.jade.input")));
                 iTooltip.append(helper.box(tooltip, helper.borderStyle().width(0)).align(IElement.Align.RIGHT));
             }
 
@@ -96,7 +102,7 @@ public class SBCJadePlugin implements IWailaPlugin {
 
                 // Hacks to make the boxes not look stupid
                 ITooltip text = helper.tooltip();
-                text.append(helper.text(new TranslatableComponent("ftbsbc.jade.buffer")));
+                text.append(helper.text(Component.translatable("ftbsba.jade.buffer")));
                 iTooltip.append(helper.box(text, helper.borderStyle().width(0)).align(IElement.Align.RIGHT));
             }
         }
@@ -113,13 +119,13 @@ public class SBCJadePlugin implements IWailaPlugin {
             compoundTag.putInt("maxTimeout", autoHammerEntity.getTimeoutDuration());
 
             Direction direction = autoHammerEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
-            ItemStack inputStack = autoHammerEntity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, AutoHammerBlockEntity.getInputDirection(direction))
+            ItemStack inputStack = autoHammerEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, AutoHammerBlockEntity.getInputDirection(direction))
                     .map(h -> h.getStackInSlot(0))
                     .orElse(ItemStack.EMPTY);
 
             compoundTag.put("input", LightItem.create(inputStack).serialize());
 
-            LazyOptional<IItemHandler> capability = autoHammerEntity.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, AutoHammerBlockEntity.getOutputDirection(direction));
+            LazyOptional<IItemHandler> capability = autoHammerEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, AutoHammerBlockEntity.getOutputDirection(direction));
             IItemHandler inventory = capability
                     .orElse(EmptyHandler.INSTANCE);
 
@@ -130,10 +136,16 @@ public class SBCJadePlugin implements IWailaPlugin {
                     continue;
                 }
 
-                tagItems.add(new LightItem(stackInSlot.getItem().getRegistryName(), stackInSlot.getCount()).serialize());
+                ;
+                tagItems.add(new LightItem(ForgeRegistries.ITEMS.getKey(stackInSlot.getItem()), stackInSlot.getCount()).serialize());
             }
 
             compoundTag.put("output", tagItems);
+        }
+
+        @Override
+        public ResourceLocation getUid() {
+            return ID;
         }
     }
 
@@ -142,7 +154,7 @@ public class SBCJadePlugin implements IWailaPlugin {
             int count
     ) {
         public static LightItem create(ItemStack stack) {
-            return new LightItem(stack.getItem().getRegistryName(), stack.getCount());
+            return new LightItem(ForgeRegistries.ITEMS.getKey(stack.getItem()), stack.getCount());
         }
 
         public static LightItem deserialize(CompoundTag compound) {

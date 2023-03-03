@@ -1,7 +1,7 @@
 {
     "textures": {
-        "particle": "ftbsbc:block/stone_block_portal",
-        "portal": "ftbsbc:block/stone_block_portal"
+        "particle": "ftbsba:block/stone_block_portal",
+        "portal": "ftbsba:block/stone_block_portal"
     },
     "elements": [
         {   "from": [ 6, 0, 0 ],

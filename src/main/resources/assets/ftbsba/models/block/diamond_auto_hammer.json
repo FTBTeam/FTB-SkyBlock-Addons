@@ -2,9 +2,9 @@
 	"credit": "Made with Blockbench",
 	"texture_size": [64, 64],
 	"textures": {
-		"particle": "ftbsbc:block/diamond_auto_hammer_base",
-		"base": "ftbsbc:block/diamond_auto_hammer_base",
-		"hammer": "ftbsbc:block/diamond_auto_hammer"
+		"particle": "ftbsba:block/diamond_auto_hammer_base",
+		"base": "ftbsba:block/diamond_auto_hammer_base",
+		"hammer": "ftbsba:block/diamond_auto_hammer"
 	},
 	"elements": [
 		{

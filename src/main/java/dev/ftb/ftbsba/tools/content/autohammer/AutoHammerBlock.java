@@ -19,6 +19,7 @@ import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.CapabilityItemHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,8 +84,8 @@ public class AutoHammerBlock extends Block implements EntityBlock {
                 Direction dir = state.getValue(HORIZONTAL_FACING);
                 AutoHammerBlockEntity autoHammer = (AutoHammerBlockEntity) tileEntity;
 
-                autoHammer.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, AutoHammerBlockEntity.getInputDirection(dir)).ifPresent(e -> popResource(world, pos, e.getStackInSlot(0)));
-                autoHammer.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, AutoHammerBlockEntity.getOutputDirection(dir)).ifPresent(e -> {
+                autoHammer.getCapability(ForgeCapabilities.ITEM_HANDLER, AutoHammerBlockEntity.getInputDirection(dir)).ifPresent(e -> popResource(world, pos, e.getStackInSlot(0)));
+                autoHammer.getCapability(ForgeCapabilities.ITEM_HANDLER, AutoHammerBlockEntity.getOutputDirection(dir)).ifPresent(e -> {
                     for (int i = 0; i < e.getSlots(); i++) {
                         popResource(world, pos, e.getStackInSlot(i));
                     }
