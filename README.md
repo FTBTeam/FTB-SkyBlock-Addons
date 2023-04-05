@@ -1,14 +1,12 @@
-# FTB Skyblock Addons
+# FTB SkyBlock Addons
 
+FTB SkyBlock Addons is a mod designed to add helper content to any of our SkyBlock styled modpacks. Right now we only have a few features but these will be extended as more packs are created.
 
 ### Tools
 
 - Auto hammers
 - Hammers
 - Crook
-- JEI / REI integration for Cauldron recipes
-- FirePlow
-  - This item allows the player to hold right click with the item in hand to create lava from stone
 
 ## Support
 

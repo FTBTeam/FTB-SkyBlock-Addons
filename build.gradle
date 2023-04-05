@@ -122,8 +122,8 @@ publishing {
 	publications {
 		mavenJava(MavenPublication) {
 			groupId = project.group
-      artifactId = project.archivesBaseName
-      version = mavenVersion
+			  artifactId = project.archivesBaseName
+			  version = mavenVersion
 
 			artifact(remapJar) {
 				builtBy remapJar
