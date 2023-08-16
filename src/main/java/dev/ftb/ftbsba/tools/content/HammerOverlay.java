@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -44,8 +45,7 @@ import java.util.concurrent.ExecutionException;
 public class HammerOverlay {
     private static final ResourceLocation TEXTURE = new ResourceLocation(FTBSBA.MOD_ID, "textures/hammer_convert.png");
 
-    private static float tick = 0;
-    private static int index = 0;
+    private static final int CYCLE_RATE = 20;  // ticks
 
     public static Cache<Block, List<ItemStack>> recipeCacheResult = CacheBuilder.newBuilder()
             .expireAfterWrite(Duration.ofMinutes(1))
@@ -112,17 +112,9 @@ public class HammerOverlay {
 
         pose.popPose();
 
-        tick += Minecraft.getInstance().getDeltaFrameTime();
-        if (tick > 60) {
-            tick = 0;
-            index ++;
-        }
-
-        if (index >= recipeResults.size()) {
-            index = 0;
-        }
-
         renderItem(new ItemStack(player.level.getBlockState(blockHit.getBlockPos()).getBlock()), x + 3, y + 3);
+
+        int index = Mth.clamp(player.tickCount % (CYCLE_RATE * recipeResults.size()) / CYCLE_RATE, 0, recipeResults.size());
         renderItem(recipeResults.get(index), x + (58 - 16) + 3, y + 3);
     }
 
