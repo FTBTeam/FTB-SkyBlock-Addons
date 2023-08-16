@@ -114,7 +114,7 @@ public class HammerOverlay {
 
         renderItem(new ItemStack(player.level.getBlockState(blockHit.getBlockPos()).getBlock()), x + 3, y + 3);
 
-        int index = Mth.clamp(player.tickCount % (CYCLE_RATE * recipeResults.size()) / CYCLE_RATE, 0, recipeResults.size());
+        int index = Mth.clamp(player.tickCount % (CYCLE_RATE * recipeResults.size()) / CYCLE_RATE, 0, recipeResults.size() - 1);
         renderItem(recipeResults.get(index), x + (58 - 16) + 3, y + 3);
     }
 
