@@ -7,20 +7,20 @@ license = "All rights reserved"
   version = "${version}"
   displayName = "FTB Skyblock Addons"
   description = '''
-  Addons for a typical Skeyblock
+  Addons for a typical Skyblock
   '''
 
 [[dependencies.ftbsba]]
   modId = "forge"
   mandatory = true
-  versionRange = "[40,)"
+  versionRange = "[43.2.0,)"
   ordering = "NONE"
   side = "BOTH"
 
 [[dependencies.ftbsba]]
   modId = "kubejs"
   mandatory = true
-  versionRange = "[1902.6.0-build.142,2000)"
+  versionRange = "[1902.6.1-build.300,)"
   ordering = "NONE"
   side = "BOTH"
 

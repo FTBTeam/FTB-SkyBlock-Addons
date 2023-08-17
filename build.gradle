@@ -1,6 +1,6 @@
 plugins {
-    id "dev.architectury.loom" version "0.12.0-SNAPSHOT"
-    id "maven-publish"
+	id "dev.architectury.loom" version "0.12.0-SNAPSHOT"
+	id "maven-publish"
 	id "com.matthewprenger.cursegradle" version "1.4.0"
 }
 
@@ -12,83 +12,86 @@ archivesBaseName = project.archives_base_name
 version = "${project.mod_version}+mc${project.minecraft_version}"
 group = project.maven_group
 
+// needs to be done AFTER version is set
+apply from: "https://raw.githubusercontent.com/FTBTeam/mods-meta/main/gradle/publishing.gradle"
+
 loom {
-    silentMojangMappingsLicense()
+	silentMojangMappingsLicense()
 
-    forge {
-        mixinConfigs = [
+	forge {
+		mixinConfigs = [
 //                "ftbsba.mixins.json"
-        ]
+		]
 
-        dataGen {
-            mod project.mod_id
-        }
-    }
+		dataGen {
+			mod project.mod_id
+		}
+	}
 
-    launches {
-        data {
-            arg "--existing", file("src/main/resources").absolutePath
-        }
-    }
+	launches {
+		data {
+			arg "--existing", file("src/main/resources").absolutePath
+		}
+	}
 }
 
 repositories {
-    maven { url "https://www.cursemaven.com" }
-    maven { url "https://maven.saps.dev/releases" }
-    maven { url "https://maven.shedaniel.me/" }
+	maven { url "https://www.cursemaven.com" }
+	maven { url "https://maven.saps.dev/releases" }
+	maven { url "https://maven.architectury.dev/" }
+	maven {
+		url "https://maven.blamejared.com"
+		content {
+			includeGroup "mezz.jei"
+		}
+	}
 }
 
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-    mappings loom.officialMojangMappings()
+	mappings loom.officialMojangMappings()
 
-    forge "net.minecraftforge:forge:${project.forge_version}"
+	forge "net.minecraftforge:forge:${project.forge_version}"
 
-    modImplementation "curse.maven:jei-238222:${jei_file}"
-    modImplementation "dev.latvian.mods:kubejs-forge:${kubejs_version}"
-    modImplementation "dev.latvian.mods:rhino-forge:${rhino_version}"
+	modCompileOnly("mezz.jei:jei-${project.minecraft_version}-common-api:${project.jei_version}")
+	modCompileOnly("mezz.jei:jei-${project.minecraft_version}-forge-api:${project.jei_version}")
+	modRuntimeOnly("mezz.jei:jei-${project.minecraft_version}-forge:${project.jei_version}")
 
-    modImplementation ("curse.maven:jade-324717:${jade_version}")
+	modImplementation("dev.latvian.mods:kubejs-forge:${kubejs_version}")
+	modImplementation("dev.latvian.mods:rhino-forge:${rhino_version}")
+
+	modImplementation ("curse.maven:jade-324717:${jade_version}")
 }
 
 processResources {
-    inputs.property "version", project.version
+	inputs.property "version", project.version
 
-    filesMatching("META-INF/mods.toml") {
-        expand "version": project.version
-    }
+	filesMatching("META-INF/mods.toml") {
+		expand "version": project.version
+	}
 }
 
 tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
-    options.release = 17
+	options.encoding = "UTF-8"
+	options.release = 17
 }
 
 java {
-    withSourcesJar()
+	withSourcesJar()
 }
 
 jar {
-    manifest {
-        attributes([
-                "Specification-Title"     : project.mod_id,
-                "Specification-Vendor"    : project.mod_author,
-                "Specification-Version"   : "1",
-                "Implementation-Title"    : project.name,
-                "Implementation-Version"  : version,
-                "Implementation-Vendor"   : project.mod_author,
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        ])
-    }
-}
-
-def relType = "release"
-if (ENV.TAG != null) {
-	if (ENV.TAG.contains("alpha")) {
-		relType = "alpha"
-	} else if (ENV.TAG.contains("beta")) {
-		relType = "beta"
+	manifest {
+		attributes([
+				"Specification-Title"     : project.mod_id,
+				"Specification-Vendor"    : project.mod_author,
+				"Specification-Version"   : "1",
+				"Implementation-Title"    : project.name,
+				"Implementation-Version"  : version,
+				"Implementation-Vendor"   : project.mod_author,
+				"Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+		])
 	}
 }
 
@@ -97,7 +100,7 @@ if (ENV.CURSEFORGE_KEY) {
 		apiKey = ENV.CURSEFORGE_KEY
 		project {
 			id = project.curseforge_id
-			releaseType = relType
+			releaseType = ftbPublishing.relType
 			addGameVersion "Forge"
 			addGameVersion project.minecraft_version
 			mainArtifact(remapJar.archiveFile)
@@ -111,43 +114,38 @@ if (ENV.CURSEFORGE_KEY) {
 	}
 }
 
-def ftbURL = "https://maven.ftb.dev/release"
-def sapsURL = "https://maven.saps.dev/releases"
-def mavenVersion = project.version
-if (ENV.SNAPSHOT != null && ENV.SNAPSHOT == "true") {
-	ftbURL = "https://maven.ftb.dev/snapshot"
-	mavenVersion += "-SNAPSHOT"
-}
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
-			groupId = project.group
-			  artifactId = project.archivesBaseName
-			  version = mavenVersion
-
+			artifactId = project.archivesBaseName
+			version ftbPublishing.mavenVersion
+			// add all the jars that should be included when publishing to maven
 			artifact(remapJar) {
 				builtBy remapJar
+			}
+			artifact(sourcesJar) {
+				builtBy remapSourcesJar
 			}
 		}
 	}
 
 	repositories {
-		if (ENV.FTB_MAVEN_TOKEN) {
+		if (ftbPublishing.ftbToken) {
 			maven {
-				url ftbURL
+				url ftbPublishing.ftbURL
 				credentials {
-					username = "ftb"
-					password = "${ENV.FTB_MAVEN_TOKEN}"
+					username = ftbPublishing.ftbUser
+					password = ftbPublishing.ftbToken
 				}
 			}
 		}
 
-		if (ENV.SAPS_TOKEN) {
+		if (ftbPublishing.sapsToken) {
 			maven {
-				url sapsURL
+				url ftbPublishing.sapsURL
 				credentials {
-					username = "ftb"
-					password = "${ENV.SAPS_TOKEN}"
+					username = ftbPublishing.sapsUser
+					password = ftbPublishing.sapsToken
 				}
 			}
 		}
