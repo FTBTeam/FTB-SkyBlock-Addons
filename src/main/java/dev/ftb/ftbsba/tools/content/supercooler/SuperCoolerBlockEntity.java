@@ -44,25 +44,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
         }
     };
 
-    public LazyOptional<IEnergyStorage> energy = LazyOptional.of(() -> new EnergyStorage(100000, 1000, 1000) {
-        @Override
-        public int receiveEnergy(int maxReceive, boolean simulate) {
-            var result = super.receiveEnergy(maxReceive, simulate);
-            if (!simulate) {
-                setChanged();
-            }
-            return result;
-        }
-
-        @Override
-        public int extractEnergy(int maxExtract, boolean simulate) {
-            var result = super.extractEnergy(maxExtract, simulate);
-            if (!simulate) {
-                setChanged();
-            }
-            return result;
-        }
-    });
+    public LazyOptional<CustomEnergy> energy = LazyOptional.of(() -> new CustomEnergy(this));
 
     public LazyOptional<IFluidTank> tank = LazyOptional.of(() -> new FluidTank(10000) {
         @Override
@@ -158,12 +140,9 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             wrapper.getInput().deserializeNBT(arg.getCompound("input"));
             wrapper.getInput().deserializeNBT(arg.getCompound("output"));
         });
-        energy.ifPresent(storage ->
-                storage.receiveEnergy(arg.getInt("energy"), false)
-        );
+        energy.ifPresent(storage -> storage.deserializeNBT(arg.get("energy")));
         tank.ifPresent(tank -> {
-            var tag = arg.getCompound("fluid");
-            tank.fill(FluidStack.loadFluidStackFromNBT(tag), IFluidHandler.FluidAction.EXECUTE);
+            ((FluidTank) tank).readFromNBT(arg.getCompound("fluid"));
         });
     }
 
@@ -175,11 +154,9 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             arg.put("input", wrapper.getInput().serializeNBT());
             arg.put("output", wrapper.getInput().serializeNBT());
         });
-        energy.ifPresent(storage -> arg.putInt("energy", storage.getEnergyStored()));
+        energy.ifPresent(storage -> arg.put("energy", storage.serializeNBT()));
         tank.ifPresent(tank -> {
-            var tag = new CompoundTag();
-            tank.getFluid().writeToNBT(tag);
-            arg.put("fluid", tag);
+            arg.put("fluid", ((FluidTank) tank).writeToNBT(new CompoundTag()));
         });
     }
 
@@ -204,5 +181,32 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
         load(pkt.getTag());
+    }
+
+    public static class CustomEnergy extends EnergyStorage {
+        BlockEntity entity;
+
+        public CustomEnergy(BlockEntity blockEntity) {
+            super(100000, 1000, 1000);
+            entity = blockEntity;
+
+        }
+        @Override
+        public int receiveEnergy(int maxReceive, boolean simulate) {
+            var result = super.receiveEnergy(maxReceive, simulate);
+            if (!simulate) {
+                this.entity.setChanged();
+            }
+            return result;
+        }
+
+        @Override
+        public int extractEnergy(int maxExtract, boolean simulate) {
+            var result = super.extractEnergy(maxExtract, simulate);
+            if (!simulate) {
+                this.entity.setChanged();
+            }
+            return result;
+        }
     }
 }
