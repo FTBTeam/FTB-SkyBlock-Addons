@@ -1,6 +1,8 @@
 package dev.ftb.ftbsba.tools.content.supercooler;
 
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.recipies.NoInventory;
+import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import dev.ftb.ftbsba.tools.utils.IOStackWrapper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -105,6 +107,8 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
     };
 
     int progress = 0;
+    SuperCoolerRecipe processingRecipe = null;
+    SuperCoolerRecipe lastProcessedRecipe = null;
 
     public SuperCoolerBlockEntity(BlockPos pos, BlockState state) {
         super(ToolsRegistry.SUPER_COOLER_BLOCK_ENTITY.get(), pos, state);
@@ -115,7 +119,104 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             return;
         }
 
+        if (level.isClientSide) {
+            return;
+        }
 
+        if (!entity.hasEnergy() || !entity.hasFluid() || !entity.hasItemInAnySlot()) {
+            entity.progress = 0;
+            return;
+        }
+
+        // We should test for the recipe here
+        if (entity.progress == 0) {
+            SuperCoolerRecipe recipe = entity.testForRecipe();
+            if (recipe == null) {
+                return;
+            }
+
+            entity.progress = 1;
+            entity.processingRecipe = recipe;
+        } else if (entity.progress >= 100) {
+            entity.progress = 0;
+            entity.executeRecipe();
+            entity.processingRecipe = null;
+        } else {
+            // Use energy
+            entity.progress++;
+        }
+    }
+
+    public void executeRecipe() {
+        // Extract the fluid
+        // Extract the items
+        // Produce the result
+    }
+
+    private boolean hasFluid() {
+        return tank.map(IFluidTank::getFluid).map(FluidStack::isEmpty).orElse(true);
+    }
+
+    private boolean hasEnergy() {
+        return energy.getEnergyStored() > 0;
+    }
+
+    private boolean hasItemInAnySlot() {
+        if (!ioWrapper.isPresent()) {
+            return true;
+        }
+
+        var input = ioWrapper.orElseThrow(RuntimeException::new).getInput();
+        for (int i = 0; i < input.getSlots(); i++) {
+            if (!input.getStackInSlot(i).isEmpty()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Nullable
+    private SuperCoolerRecipe testForRecipe() {
+        LazyOptional<IOStackWrapper> ioWrapper = this.ioWrapper;
+        if (!ioWrapper.isPresent()) {
+            return null;
+        }
+
+        var recipes = this.level.getServer().getRecipeManager().getAllRecipesFor(ToolsRegistry.SUPER_COOLER_RECIPE_TYPE.get(), NoInventory.INSTANCE, this.level);
+        if (recipes.isEmpty()) {
+            return null;
+        }
+
+        if (!this.tank.isPresent()) {
+            return null;
+        }
+
+        var recipesForFluid = recipes.stream()
+                .filter(e -> !e.fluidIngredient.isEmpty())
+                .filter(e -> e.fluidIngredient.isFluidEqual(this.tank.orElseThrow(RuntimeException::new).getFluid()))
+                .filter(e -> e.fluidIngredient.getAmount() <= this.tank.orElseThrow(RuntimeException::new).getFluidAmount())
+                .toList();
+
+        for (var recipe : recipesForFluid) {
+            IOStackWrapper io = ioWrapper.orElseThrow(RuntimeException::new);
+            ItemStackHandler input = io.getInput();
+
+            var filledIngredients = recipe.ingredients.stream().filter(e -> !e.isEmpty()).toList();
+            for (var ingredient : filledIngredients) {
+                for (int i = 0; i < input.getSlots(); i++) {
+                    if (!ingredient.test(input.getStackInSlot(i))) {
+                        // If any of the ingredients don't match, return false
+                        return null;
+                    }
+                }
+            }
+
+            // The fluid and fluid amount has to already match thus we don't need to check it again
+            return recipe;
+        }
+
+        return null;
     }
 
     @Override

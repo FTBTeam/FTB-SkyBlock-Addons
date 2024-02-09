@@ -38,36 +38,6 @@ public class SuperCoolerRecipe implements Recipe<NoInventory> {
 
     @Override
     public boolean matches(NoInventory inv, Level world) {
-//        LazyOptional<IOStackWrapper> ioWrapper = inv.ioWrapper;
-//        if (!ioWrapper.isPresent()) {
-//            return false;
-//        }
-//
-//        IOStackWrapper io = ioWrapper.orElseThrow(RuntimeException::new);
-//        ItemStackHandler input = io.getInput();
-//
-//        var filledIngredients = ingredients.stream().filter(e -> !e.isEmpty()).toList();
-//        for (var ingredient : filledIngredients) {
-//            for (int i = 0; i < input.getSlots(); i++) {
-//                if (!ingredient.test(input.getStackInSlot(i))) {
-//                    // If any of the ingredients don't match, return false
-//                    return false;
-//                }
-//            }
-//        }
-//
-//        // Now test the fluid
-//        if (!fluidIngredient.isEmpty()) {
-//            if (!inv.tank.isPresent()) {
-//                return false;
-//            }
-//
-//            var entityFluid = inv.tank.orElseThrow(RuntimeException::new).getFluid();
-//            return fluidIngredient.isFluidEqual(entityFluid) && fluidIngredient.getAmount() <= entityFluid.getAmount();
-//        }
-//
-//        return true;
-
         return true;
     }
 
