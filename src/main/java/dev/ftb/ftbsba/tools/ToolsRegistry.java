@@ -1,6 +1,7 @@
 package dev.ftb.ftbsba.tools;
 
 import com.mojang.serialization.Codec;
+import dev.architectury.registry.registries.RegistrySupplier;
 import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.content.CrookItem;
 import dev.ftb.ftbsba.tools.content.HammerItem;
@@ -15,10 +16,7 @@ import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerBlockEntity;
 import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerContainer;
 import dev.ftb.ftbsba.tools.loot.CrookModifier;
 import dev.ftb.ftbsba.tools.loot.HammerModifier;
-import dev.ftb.ftbsba.tools.recipies.CrookRecipe;
-import dev.ftb.ftbsba.tools.recipies.CrookRecipeSerializer;
-import dev.ftb.ftbsba.tools.recipies.HammerRecipe;
-import dev.ftb.ftbsba.tools.recipies.HammerRecipeSerializer;
+import dev.ftb.ftbsba.tools.recipies.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
@@ -111,10 +109,18 @@ public interface ToolsRegistry {
     RegistryObject<Codec<? extends IGlobalLootModifier>> HAMMER_LOOT_MODIFIER = LOOT_MODIFIERS_REGISTRY.register("hammer_loot_modifier", () -> HammerModifier.CODEC);
     RegistryObject<Codec<? extends IGlobalLootModifier>> CROOK_LOOT_MODIFIER = LOOT_MODIFIERS_REGISTRY.register("crook_loot_modifier", () -> CrookModifier.CODEC);
 
-    RegistryObject<RecipeSerializer<?>> CROOK_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("crook", CrookRecipeSerializer::new);
     RegistryObject<RecipeType<CrookRecipe>> CROOK_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("crook", () -> new RecipeType<>() {});
-    RegistryObject<RecipeSerializer<?>> HAMMER_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("hammer", HammerRecipeSerializer::new);
+    RegistryObject<RecipeSerializer<?>> CROOK_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("crook", CrookRecipeSerializer::new);
+
     RegistryObject<RecipeType<HammerRecipe>> HAMMER_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("hammer", () -> new RecipeType<>() {});
+    RegistryObject<RecipeSerializer<?>> HAMMER_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("hammer", HammerRecipeSerializer::new);
+
+    RegistryObject<RecipeType<SuperCoolerRecipe>> SUPER_COOLER_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("super_cooler", () -> new RecipeType<>() {});
+    RegistryObject<RecipeSerializer<?>> SUPER_COOLER_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("super_cooler", SuperCoolerRecipeSerializer::new);
+
+    RegistryObject<RecipeType<FusingMachineRecipe>> FUSING_MACHINE_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("fusing_machine", () -> new RecipeType<>() {});
+    RegistryObject<RecipeSerializer<?>> FUSING_MACHINE_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("fusing_machine", FusingMachineRecipeSerializer::new);
+
 
     class ToolTipBlockItem extends BlockItem {
         private final Component tooltip;
