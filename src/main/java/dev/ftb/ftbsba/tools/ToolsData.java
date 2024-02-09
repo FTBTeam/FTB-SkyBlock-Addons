@@ -125,12 +125,17 @@ public class ToolsData {
             this.add("ftbsba.tooltip.hammers", "Crushes materials down to their core components");
             this.add("ftbsba.tooltip.auto-hammers", "Automatically crushes materials down using the hammer based on the tier of hammer");
 
+            this.add("ftbsba.tooltip.fusing_machine", "Used to fuse items together to produce new results");
+            this.add("ftbsba.tooltip.super_cooler", "Used to super-cool items to produce new results");
+
             this.add("ftbsba.jade.waiting", "Waiting for input: %s ticks");
             this.add("ftbsba.jade.processing", "Processing: %s/%s");
             this.add("ftbsba.jade.input", "Input");
             this.add("ftbsba.jade.buffer", "Buffer");
 
             this.add("config.jade.plugin_ftbsba.blocks", "FTB Skyblock Addons Blocks");
+            this.add("container.ftbsba.super_cooler", "Super Cooler");
+            this.add("container.ftbsba.fusing_machine", "Fusing Machine");
         }
     }
 

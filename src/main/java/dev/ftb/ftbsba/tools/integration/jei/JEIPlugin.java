@@ -2,7 +2,6 @@ package dev.ftb.ftbsba.tools.integration.jei;
 
 import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
-import dev.ftb.ftbsba.tools.recipies.CrookRecipe;
 import dev.ftb.ftbsba.tools.recipies.NoInventory;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
