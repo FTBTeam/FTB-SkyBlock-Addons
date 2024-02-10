@@ -12,6 +12,7 @@ import net.minecraft.data.DataGenerator;
 import net.minecraft.data.loot.BlockLoot;
 import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.data.recipes.RecipeBuilder;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.tags.BlockTagsProvider;
@@ -316,6 +317,7 @@ public class ToolsData {
                     .define('T', top)
                     .define('C', center)
                     .save(consumer);
+
         }
 
         private void hammer(ItemLike output, TagKey<Item> head, Consumer<FinishedRecipe> consumer) {

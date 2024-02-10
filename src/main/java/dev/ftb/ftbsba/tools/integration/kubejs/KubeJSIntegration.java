@@ -12,5 +12,6 @@ public class KubeJSIntegration extends KubeJSPlugin {
         event.register(new ResourceLocation(FTBSBA.MOD_ID, "crook"), CrookRecipeSchema.SCHEMA);
         event.register(new ResourceLocation(FTBSBA.MOD_ID, "fusing_machine"), FusingMachineRecipeSchema.SCHEMA);
         event.register(new ResourceLocation(FTBSBA.MOD_ID, "super_cooler"), SuperCoolerRecipeSchema.SCHEMA);
+
     }
 }

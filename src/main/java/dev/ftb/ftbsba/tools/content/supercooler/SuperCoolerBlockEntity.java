@@ -1,21 +1,21 @@
 package dev.ftb.ftbsba.tools.content.supercooler;
 
 import dev.ftb.ftbsba.tools.ToolsRegistry;
-import dev.ftb.ftbsba.tools.recipies.NoInventory;
 import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import dev.ftb.ftbsba.tools.utils.IOStackWrapper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -36,11 +36,9 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
-        }
-
-        @Override
-        public int getSlotLimit(int slot) {
-            return 1;
+            if (progress > 0) {
+                progress = 0;
+            }
         }
     };
 
@@ -79,6 +77,8 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
                 return tank.map(IFluidTank::getFluid).map(FluidStack::getAmount).orElse(0);
             } else if (index == 3) {
                 return progress;
+            } else if (index == 4) {
+                return progressRequired;
             }
 
             return result;
@@ -94,21 +94,30 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
                 energy.setEnergy(energy.getEnergyStored() & 0x0000FFFF | (value << 16), false);
             } else if (index == 2) {
                 final int finalValue = value;
-                tank.ifPresent(tank -> tank.fill(new FluidStack(tank.getFluid(), finalValue), IFluidHandler.FluidAction.EXECUTE));
+                tank.ifPresent(tank -> {
+                    // If the value is greater than the previous value, we're filling the tank
+                    if (finalValue > tank.getFluidAmount()) {
+                        tank.fill(new FluidStack(tank.getFluid(), finalValue - tank.getFluidAmount()), IFluidHandler.FluidAction.EXECUTE);
+                    } else {
+                        tank.drain(tank.getFluidAmount() - finalValue, IFluidHandler.FluidAction.EXECUTE);
+                    }
+                });
             } else if (index == 3) {
                 progress = value;
+            } else if (index == 4) {
+                progressRequired = value;
             }
         }
 
         @Override
         public int getCount() {
-            return 4;
+            return 5;
         }
     };
 
     int progress = 0;
+    int progressRequired = 0;
     SuperCoolerRecipe processingRecipe = null;
-    SuperCoolerRecipe lastProcessedRecipe = null;
 
     public SuperCoolerBlockEntity(BlockPos pos, BlockState state) {
         super(ToolsRegistry.SUPER_COOLER_BLOCK_ENTITY.get(), pos, state);
@@ -135,26 +144,110 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
                 return;
             }
 
+            if (!entity.canAcceptOutput(recipe)) {
+                return;
+            }
+
             entity.progress = 1;
             entity.processingRecipe = recipe;
-        } else if (entity.progress >= 100) {
-            entity.progress = 0;
+            entity.progressRequired = recipe.energyComponent.ticksToProcess();
+        } else if (entity.progress >= entity.progressRequired) {
             entity.executeRecipe();
-            entity.processingRecipe = null;
+            entity.breakProgress();
         } else {
             // Use energy
+            entity.useEnergy();
             entity.progress++;
         }
     }
 
     public void executeRecipe() {
+        // This shouldn't be possible, but we'll check because we have to
+        var tank = this.tank.orElseThrow(RuntimeException::new);
+        var ioWrapper = this.ioWrapper.orElseThrow(RuntimeException::new);
+
         // Extract the fluid
+        int requiredFluid = this.processingRecipe.fluidIngredient.getAmount();
+        var fluidResult = tank.drain(requiredFluid, IFluidHandler.FluidAction.SIMULATE);
+        if (fluidResult.isEmpty() || fluidResult.getAmount() < requiredFluid) {
+            breakProgress();
+            return;
+        }
+
         // Extract the items
+        // First test if we can extract the items by simulating and validating the result
+        var requiredItems = this.processingRecipe.ingredients;
+        for (var ingredient : requiredItems) {
+            for (int i = 0; i < ioWrapper.getInput().getSlots(); i++) {
+                var stack = ioWrapper.getInput().getStackInSlot(i);
+                if (ingredient.test(stack)) {
+                    var result = ioWrapper.getInput().extractItem(i, 1, true);
+                    if (result.isEmpty()) {
+                        breakProgress();
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Do everything
+        tank.drain(requiredFluid, IFluidHandler.FluidAction.EXECUTE);
+        for (var ingredient : requiredItems) {
+            for (int i = 0; i < ioWrapper.getInput().getSlots(); i++) {
+                var stack = ioWrapper.getInput().getStackInSlot(i);
+                if (ingredient.test(stack)) {
+                    // This logically can't be false due to the simulation above
+                    ioWrapper.getInput().extractItem(i, 1, false);
+                }
+            }
+        }
+
         // Produce the result
+        ioWrapper.getOutput().insertItem(0, this.processingRecipe.result.copy(), false);
+    }
+
+    private void useEnergy() {
+        if (this.processingRecipe == null) {
+            return;
+        }
+
+        var result = this.energy.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), true);
+        if (result < this.processingRecipe.energyComponent.fePerTick()) {
+            breakProgress();
+            return;
+        }
+
+        this.energy.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), false);
+    }
+
+    /**
+     * This will always force us back to the start of the recipe
+     */
+    private void breakProgress() {
+        this.progress = 0;
+        this.progressRequired = 0;
+        this.processingRecipe = null;
+    }
+
+    public boolean canAcceptOutput(SuperCoolerRecipe recipe) {
+        var output = this.ioWrapper.orElseThrow(RuntimeException::new).getOutput();
+        var outputSlot = output.getStackInSlot(0);
+
+        if (outputSlot.isEmpty()) {
+            return true;
+        }
+
+        // Do we have room for the result?
+        if (outputSlot.getCount() >= outputSlot.getMaxStackSize()) {
+            return false;
+        }
+
+        // Are the items the same?
+        return outputSlot.sameItem(recipe.result);
     }
 
     private boolean hasFluid() {
-        return tank.map(IFluidTank::getFluid).map(FluidStack::isEmpty).orElse(true);
+        return tank.map(IFluidTank::getFluid).map(e -> !e.isEmpty()).orElse(false);
     }
 
     private boolean hasEnergy() {
@@ -176,6 +269,10 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
         return false;
     }
 
+    /**
+     * Concerned this is too complex for a per tick operation.
+     * @return The recipe to process, or null if no recipe can be processed
+     */
     @Nullable
     private SuperCoolerRecipe testForRecipe() {
         LazyOptional<IOStackWrapper> ioWrapper = this.ioWrapper;
@@ -183,12 +280,26 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             return null;
         }
 
-        var recipes = this.level.getServer().getRecipeManager().getAllRecipesFor(ToolsRegistry.SUPER_COOLER_RECIPE_TYPE.get(), NoInventory.INSTANCE, this.level);
+        // Does this cache? I haven't looked yet
+        var recipes = this.level.getServer().getRecipeManager().getAllRecipesFor(ToolsRegistry.SUPER_COOLER_RECIPE_TYPE.get());
         if (recipes.isEmpty()) {
             return null;
         }
 
         if (!this.tank.isPresent()) {
+            return null;
+        }
+
+        boolean hasOccupiedSlot = false;
+        for (int i = 0; i < this.inventory.getSlots(); i++) {
+            if (!this.inventory.getStackInSlot(i).isEmpty()) {
+                hasOccupiedSlot = true;
+                break;
+            }
+        }
+
+        // No items in the input slots = no recipe
+        if (!hasOccupiedSlot) {
             return null;
         }
 
@@ -203,16 +314,29 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             ItemStackHandler input = io.getInput();
 
             var filledIngredients = recipe.ingredients.stream().filter(e -> !e.isEmpty()).toList();
-            for (var ingredient : filledIngredients) {
-                for (int i = 0; i < input.getSlots(); i++) {
-                    if (!ingredient.test(input.getStackInSlot(i))) {
-                        // If any of the ingredients don't match, return false
-                        return null;
+            System.out.println(filledIngredients.size());
+            NonNullList<Ingredient> foundIngredients = NonNullList.create();
+
+            for (int i = 0; i < input.getSlots(); i++) {
+                var stack = input.getStackInSlot(i);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+
+                for (var ingredient : filledIngredients) {
+                    if (ingredient.test(stack)) {
+                        foundIngredients.add(ingredient);
                     }
                 }
             }
 
-            // The fluid and fluid amount has to already match thus we don't need to check it again
+            // Compare the found ingredients to the recipe ingredients
+            for (var ingredient : recipe.ingredients) {
+                if (!foundIngredients.contains(ingredient)) {
+                    return null;
+                }
+            }
+
             return recipe;
         }
 

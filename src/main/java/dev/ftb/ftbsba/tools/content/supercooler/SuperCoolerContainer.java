@@ -12,8 +12,10 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.items.SlotItemHandler;
+import org.jetbrains.annotations.NotNull;
 
 public class SuperCoolerContainer extends AbstractContainerMenu {
     SuperCoolerBlockEntity entity;
@@ -29,7 +31,7 @@ public class SuperCoolerContainer extends AbstractContainerMenu {
             addSlot(new SlotItemHandler(inventory.getInput(), 0, 42, startY));
             addSlot(new SlotItemHandler(inventory.getInput(), 1, 42, startY + 18));
             addSlot(new SlotItemHandler(inventory.getInput(), 2, 42, startY + (18 * 2)));
-            addSlot(new SlotItemHandler(inventory.getOutput(), 0, 122, startY + 19));
+            addSlot(new ExtractOnlySlot(inventory.getOutput(), 0, 122, startY + 19));
         });
 
         this.containerData = containerData;
@@ -53,11 +55,11 @@ public class SuperCoolerContainer extends AbstractContainerMenu {
             ItemStack currentStack = slot.getItem();
             itemstack = currentStack.copy();
 
-            if (index < 3) {
-                if (!this.moveItemStackTo(currentStack, 3, this.slots.size(), false)) {
+            if (index > 35) {
+                if (!this.moveItemStackTo(currentStack, 0, 36, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(currentStack, 0, 3, false)) {
+            } else if (!this.moveItemStackTo(currentStack, 36, 39, false)) {
                 return ItemStack.EMPTY;
             }
 
@@ -81,5 +83,16 @@ public class SuperCoolerContainer extends AbstractContainerMenu {
     public void slotsChanged(Container arg) {
         super.slotsChanged(arg);
         this.entity.setChanged();
+    }
+
+    public static class ExtractOnlySlot extends SlotItemHandler {
+        public ExtractOnlySlot(IItemHandler itemHandler, int index, int xPosition, int yPosition) {
+            super(itemHandler, index, xPosition, yPosition);
+        }
+
+        @Override
+        public boolean mayPlace(@NotNull ItemStack stack) {
+            return false;
+        }
     }
 }

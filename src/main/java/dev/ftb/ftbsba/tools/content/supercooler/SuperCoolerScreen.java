@@ -14,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractFurnaceMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.energy.IEnergyStorage;
@@ -54,6 +55,8 @@ public class SuperCoolerScreen extends AbstractContainerScreen<SuperCoolerContai
             this.renderTooltip(arg, energyText, 0, 0);
             arg.popPose();
         }
+
+        renderTooltip(arg, mouseX, mouseY);
     }
 
     @Override
@@ -75,11 +78,17 @@ public class SuperCoolerScreen extends AbstractContainerScreen<SuperCoolerContai
         int fluidMax = this.menu.entity.tank.map(IFluidTank::getCapacity).orElse(0);
 
         arg.pushPose();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 0.8F);
+
         // Energy
         float x = (float) combinedInt / energyMax;
         int energyHeight = (int) (x * 65);
         this.blit(arg, this.leftPos + imageWidth - 9, this.topPos + 4 + 65 - energyHeight, 197, 4 + 65 - energyHeight, 5, energyHeight);
         arg.popPose();
+
+        RenderSystem.disableBlend();
 
         var fluid = this.menu.entity.tank.map(IFluidTank::getFluid).orElse(null);
         if (fluid == null) {
@@ -91,10 +100,10 @@ public class SuperCoolerScreen extends AbstractContainerScreen<SuperCoolerContai
         var atlasSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(texture);
 
         // Fluid amount
-        int fluidHeight = (data.get(2) / fluidMax) * 65;
+        float fluidHeight = (float) data.get(2) / fluidMax * 65;
         int textureHeight = 16;
 
-        int tilesRequired = (int) Math.ceil((float) fluidHeight / textureHeight);
+        int tilesRequired = (int) Math.ceil(fluidHeight / textureHeight);
 
         arg.pushPose();
         RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
@@ -106,8 +115,8 @@ public class SuperCoolerScreen extends AbstractContainerScreen<SuperCoolerContai
         int[] cols = decomposeColor(fluidExtensions.getTintColor(fluid));
 
         for (int k = 0; k < tilesRequired; k++) {
-            int height = Math.min(textureHeight, fluidHeight - k * textureHeight);
-            drawFluidTexture(arg, this.leftPos + 4, this.topPos + 6 + 48 - fluidHeight + k * textureHeight, atlasSprite, height, cols);
+            int height = 16 - (int) Math.min(textureHeight, fluidHeight - k * textureHeight);
+            drawFluidTexture(arg, this.leftPos + 4, this.topPos + 6 + 47 - (k * textureHeight), atlasSprite, height, cols);
         }
 
         RenderSystem.disableBlend();
@@ -121,6 +130,10 @@ public class SuperCoolerScreen extends AbstractContainerScreen<SuperCoolerContai
         arg.translate(0, 0, 101);
         this.blit(arg, this.leftPos + 4, this.topPos + 6, 178, 3, 18, 67);
         arg.popPose();
+
+        // Finally, draw the progress bar
+        float computedPercentage = data.get(4) == 0 ? 0 : (float) data.get(3) / data.get(4) * 24;
+        this.blit(arg, this.leftPos + 80, this.topPos + 28, 203, 0, (int) computedPercentage + 1, 16);
     }
 
     private static void drawFluidTexture(PoseStack stack, float xCoord, float yCoord, TextureAtlasSprite textureSprite, int maskTop, int[] cols) {
