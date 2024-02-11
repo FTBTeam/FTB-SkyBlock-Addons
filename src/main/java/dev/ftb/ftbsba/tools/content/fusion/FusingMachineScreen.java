@@ -1,37 +1,65 @@
 package dev.ftb.ftbsba.tools.content.fusion;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.ftb.ftbsba.FTBSBA;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.renderer.GameRenderer;
+import dev.ftb.ftbsba.tools.content.core.FluidAndEnergyScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraftforge.energy.IEnergyStorage;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.IFluidTank;
+import org.jetbrains.annotations.Nullable;
 
-public class FusingMachineScreen extends AbstractContainerScreen<FusingMachineContainer> {
+public class FusingMachineScreen extends FluidAndEnergyScreen<FusingMachineContainer> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(FTBSBA.MOD_ID, "textures/gui/fusing_machine_background.png");
 
     public FusingMachineScreen(FusingMachineContainer arg, Inventory arg2, Component arg3) {
-        super(arg, arg2, arg3);
+        super(arg, arg2, arg3, 140, 90, TEXTURE);
+//        this.titleLabelX = 96;
     }
 
     @Override
-    protected void init() {
-        super.init();
+    protected void renderLabels(PoseStack arg, int i, int j) {
+        arg.pushPose();
+        arg.scale(0.75F, 0.75F, 0.75F);
+        this.font.draw(arg, this.title, (float)this.titleLabelX, (float)this.titleLabelY, 4210752);
+        arg.popPose();
     }
 
     @Override
-    public void render(PoseStack arg, int m, int n, float g) {
-        super.render(arg, m, n, g);
+    public int getEnergyAmount() {
+        var data = this.menu.containerData;
+        return (data.get(0) & 0xFFFF) | (data.get(1) << 16);
     }
 
     @Override
-    protected void renderBg(PoseStack arg, float f, int i, int j) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.setShaderTexture(0, TEXTURE);
+    public int getEnergyCapacity() {
+        return this.menu.entity.energy.map(IEnergyStorage::getMaxEnergyStored).orElse(0);
+    }
 
-        this.blit(arg, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight);
+    @Override
+    public int getFluidAmount() {
+        return this.menu.containerData.get(2);
+    }
+
+    @Override
+    public int getFluidCapacity() {
+        return this.menu.entity.tank.map(IFluidTank::getCapacity).orElse(0);
+    }
+
+    @Override
+    public @Nullable FluidStack getFluidStack() {
+        return this.menu.entity.tank.map(IFluidTank::getFluid).orElse(null);
+    }
+
+    @Override
+    public int getProgress() {
+        return this.menu.containerData.get(3);
+    }
+
+    @Override
+    public int getProgressRequired() {
+        return this.menu.containerData.get(4);
     }
 }

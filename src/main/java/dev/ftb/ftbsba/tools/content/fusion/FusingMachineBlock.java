@@ -28,7 +28,7 @@ public class FusingMachineBlock extends Block implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
-        NetworkHooks.openScreen((ServerPlayer) player, (FusingMachineBlockEntity) level.getBlockEntity(pos));
+        NetworkHooks.openScreen((ServerPlayer) player, (FusingMachineBlockEntity) level.getBlockEntity(pos), pos);
         return InteractionResult.SUCCESS;
     }
 
@@ -42,5 +42,21 @@ public class FusingMachineBlock extends Block implements EntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> entityType) {
         return FusingMachineBlockEntity::ticker;
+    }
+
+    @Override
+    public void onRemove(BlockState arg, Level arg2, BlockPos arg3, BlockState arg4, boolean bl) {
+        super.onRemove(arg, arg2, arg3, arg4, bl);
+
+        BlockEntity entity = arg2.getBlockEntity(arg3);
+        if (!(entity instanceof FusingMachineBlockEntity fusingBlockEntity)) {
+            return;
+        }
+
+        fusingBlockEntity.input.ifPresent(handler -> {
+            for (int i = 0; i < handler.getSlots(); i++) {
+                Block.popResource(arg2, arg3, handler.getStackInSlot(i));
+            }
+        });
     }
 }

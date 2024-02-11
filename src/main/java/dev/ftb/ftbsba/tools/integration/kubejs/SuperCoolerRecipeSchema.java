@@ -1,8 +1,6 @@
 package dev.ftb.ftbsba.tools.integration.kubejs;
 
-import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import dev.latvian.mods.kubejs.fluid.InputFluid;
-import dev.latvian.mods.kubejs.fluid.OutputFluid;
 import dev.latvian.mods.kubejs.item.InputItem;
 import dev.latvian.mods.kubejs.item.OutputItem;
 import dev.latvian.mods.kubejs.recipe.RecipeKey;

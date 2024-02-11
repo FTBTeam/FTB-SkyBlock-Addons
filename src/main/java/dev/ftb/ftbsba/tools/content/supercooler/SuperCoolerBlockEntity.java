@@ -1,8 +1,8 @@
 package dev.ftb.ftbsba.tools.content.supercooler;
 
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.content.core.*;
 import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
-import dev.ftb.ftbsba.tools.utils.IOStackWrapper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -10,19 +10,20 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.EnergyStorage;
+import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 import net.minecraftforge.fluids.capability.IFluidHandler;
@@ -30,94 +31,29 @@ import net.minecraftforge.fluids.capability.templates.FluidTank;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider {
-    public ItemStackHandler inventory = new ItemStackHandler(3) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-            if (progress > 0) {
-                progress = 0;
+public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider, ProgressProvider, FluidEnergyProvider {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SuperCoolerBlockEntity.class);
+
+    public LazyOptional<EmittingEnergy> energy = LazyOptional.of(() -> new EmittingEnergy(100000, 10000, 10000, (energy) -> this.setChanged()));
+    public LazyOptional<IFluidTank> tank = LazyOptional.of(() -> new EmittingFluidTank(10000, (tank) -> this.setChanged()));
+    public LazyOptional<IOStackHandler> ioWrapper = LazyOptional.of(() -> new IOStackHandler(3, 1, (container, ioType) -> {
+        setChanged();
+        if (ioType == IOStackHandler.IO.INPUT) {
+            if (this.progress > 0) {
+                this.progress = 0;
             }
         }
-    };
+    }));
 
-    public ItemStackHandler output = new ItemStackHandler(1) {
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
-
-    public CustomEnergy energy = new CustomEnergy(this);
-    public LazyOptional<CustomEnergy> energyLazy = LazyOptional.of(() -> energy);
-
-    public LazyOptional<IFluidTank> tank = LazyOptional.of(() -> new FluidTank(10000) {
-        @Override
-        protected void onContentsChanged() {
-            setChanged();
-        }
-    });
-
-    public LazyOptional<IOStackWrapper> ioWrapper = LazyOptional.of(() -> new IOStackWrapper(inventory, output));
-
-    /**
-     * Mostly borrowed from https://github.com/desht/ModularRouters/blob/MC1.20.1-master/src/main/java/me/desht/modularrouters/block/tile/ModularRouterBlockEntity.java#L1103-L1129 with permission.
-     * Thanks Desht!
-     */
-    ContainerData containerData = new ContainerData() {
-        @Override
-        public int get(int index) {
-            int result = 0;
-            if (index == 0) {
-                result = energy.getEnergyStored() & 0x0000FFFF;
-            } else if (index == 1) {
-                result = (energy.getEnergyStored() & 0xFFFF0000) >> 16;
-            } else if (index == 2) {
-                return tank.map(IFluidTank::getFluid).map(FluidStack::getAmount).orElse(0);
-            } else if (index == 3) {
-                return progress;
-            } else if (index == 4) {
-                return progressRequired;
-            }
-
-            return result;
-        }
-
-        @Override
-        public void set(int index, int value) {
-            if (value < 0) value += 65536;
-
-            if (index == 0) {
-                energy.setEnergy(energy.getEnergyStored() & 0xFFFF0000 | value, false);
-            } else if (index == 1) {
-                energy.setEnergy(energy.getEnergyStored() & 0x0000FFFF | (value << 16), false);
-            } else if (index == 2) {
-                final int finalValue = value;
-                tank.ifPresent(tank -> {
-                    // If the value is greater than the previous value, we're filling the tank
-                    if (finalValue > tank.getFluidAmount()) {
-                        tank.fill(new FluidStack(tank.getFluid(), finalValue - tank.getFluidAmount()), IFluidHandler.FluidAction.EXECUTE);
-                    } else {
-                        tank.drain(tank.getFluidAmount() - finalValue, IFluidHandler.FluidAction.EXECUTE);
-                    }
-                });
-            } else if (index == 3) {
-                progress = value;
-            } else if (index == 4) {
-                progressRequired = value;
-            }
-        }
-
-        @Override
-        public int getCount() {
-            return 5;
-        }
-    };
+    FluidEnergyProcessorContainerData containerData = new FluidEnergyProcessorContainerData(this, this);
 
     int progress = 0;
     int progressRequired = 0;
     SuperCoolerRecipe processingRecipe = null;
+    boolean tickLock = false;
 
     public SuperCoolerBlockEntity(BlockPos pos, BlockState state) {
         super(ToolsRegistry.SUPER_COOLER_BLOCK_ENTITY.get(), pos, state);
@@ -128,7 +64,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             return;
         }
 
-        if (level.isClientSide) {
+        if (level.isClientSide || entity.tickLock) {
             return;
         }
 
@@ -151,17 +87,25 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             entity.progress = 1;
             entity.processingRecipe = recipe;
             entity.progressRequired = recipe.energyComponent.ticksToProcess();
-        } else if (entity.progress >= entity.progressRequired) {
-            entity.executeRecipe();
-            entity.breakProgress();
-        } else {
-            // Use energy
-            entity.useEnergy();
-            entity.progress++;
+        }
+
+        if (entity.processingRecipe != null) {
+            if (entity.progress == entity.progressRequired) {
+                entity.executeRecipe();
+            } else {
+                // Use energy
+                entity.useEnergy();
+                entity.progress++;
+            }
         }
     }
 
     public void executeRecipe() {
+        if (this.processingRecipe == null) {
+            breakProgress();
+            return;
+        }
+
         // This shouldn't be possible, but we'll check because we have to
         var tank = this.tank.orElseThrow(RuntimeException::new);
         var ioWrapper = this.ioWrapper.orElseThrow(RuntimeException::new);
@@ -204,6 +148,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
 
         // Produce the result
         ioWrapper.getOutput().insertItem(0, this.processingRecipe.result.copy(), false);
+        breakProgress();
     }
 
     private void useEnergy() {
@@ -211,13 +156,19 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             return;
         }
 
-        var result = this.energy.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), true);
+        if (!this.energy.isPresent()) {
+            breakProgress();
+            return;
+        }
+
+        EmittingEnergy emittingEnergy = this.energy.orElseThrow(RuntimeException::new);
+        var result = emittingEnergy.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), true);
         if (result < this.processingRecipe.energyComponent.fePerTick()) {
             breakProgress();
             return;
         }
 
-        this.energy.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), false);
+        emittingEnergy.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), false);
     }
 
     /**
@@ -227,6 +178,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
         this.progress = 0;
         this.progressRequired = 0;
         this.processingRecipe = null;
+        this.tickLock = false;
     }
 
     public boolean canAcceptOutput(SuperCoolerRecipe recipe) {
@@ -251,7 +203,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     private boolean hasEnergy() {
-        return energy.getEnergyStored() > 0;
+        return energy.map(IEnergyStorage::getEnergyStored).orElse(0) > 0;
     }
 
     private boolean hasItemInAnySlot() {
@@ -275,7 +227,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
      */
     @Nullable
     private SuperCoolerRecipe testForRecipe() {
-        LazyOptional<IOStackWrapper> ioWrapper = this.ioWrapper;
+        LazyOptional<IOStackHandler> ioWrapper = this.ioWrapper;
         if (!ioWrapper.isPresent()) {
             return null;
         }
@@ -290,9 +242,14 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             return null;
         }
 
+        if (!this.ioWrapper.isPresent()) {
+            return null;
+        }
+
+        var io = ioWrapper.orElseThrow(RuntimeException::new);
         boolean hasOccupiedSlot = false;
-        for (int i = 0; i < this.inventory.getSlots(); i++) {
-            if (!this.inventory.getStackInSlot(i).isEmpty()) {
+        for (int i = 0; i < io.getInput().getSlots(); i++) {
+            if (!io.getInput().getStackInSlot(i).isEmpty()) {
                 hasOccupiedSlot = true;
                 break;
             }
@@ -310,11 +267,9 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
                 .toList();
 
         for (var recipe : recipesForFluid) {
-            IOStackWrapper io = ioWrapper.orElseThrow(RuntimeException::new);
             ItemStackHandler input = io.getInput();
 
             var filledIngredients = recipe.ingredients.stream().filter(e -> !e.isEmpty()).toList();
-            System.out.println(filledIngredients.size());
             NonNullList<Ingredient> foundIngredients = NonNullList.create();
 
             for (int i = 0; i < input.getSlots(); i++) {
@@ -348,7 +303,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
             return ioWrapper.cast();
         } else if (cap == ForgeCapabilities.ENERGY) {
-            return energyLazy.cast();
+            return energy.cast();
         } else if (cap == ForgeCapabilities.FLUID_HANDLER) {
             return tank.cast();
         }
@@ -358,7 +313,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.ftbsba.super_cooler"); // TODO: Add translation
+        return Component.translatable("container.ftbsba.super_cooler");
     }
 
     @Nullable
@@ -371,7 +326,7 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
     public void invalidateCaps() {
         super.invalidateCaps();
         ioWrapper.invalidate();
-        energyLazy.invalidate();
+        energy.invalidate();
         tank.invalidate();
     }
 
@@ -383,10 +338,32 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             wrapper.getInput().deserializeNBT(arg.getCompound("input"));
             wrapper.getInput().deserializeNBT(arg.getCompound("output"));
         });
-        energyLazy.ifPresent(storage -> storage.deserializeNBT(arg.get("energy")));
-        tank.ifPresent(tank -> {
-            ((FluidTank) tank).readFromNBT(arg.getCompound("fluid"));
-        });
+        energy.ifPresent(storage -> storage.deserializeNBT(arg.get("energy")));
+        tank.ifPresent(tank -> ((FluidTank) tank).readFromNBT(arg.getCompound("fluid")));
+
+        // Write the progress
+        this.progress = arg.getInt("progress");
+        this.progressRequired = arg.getInt("progressRequired");
+
+        // Write the recipe id
+        if (arg.contains("recipe")) {
+            try {
+                Recipe<?> parsedRecipe = this.level.getServer().getRecipeManager().byKey(new ResourceLocation(arg.getString("recipe"))).orElse(null);
+                if (parsedRecipe == null) {
+                    this.processingRecipe = null;
+                    this.progress = 0;
+                    this.progressRequired = 0;
+                    return;
+                }
+
+                this.processingRecipe = (SuperCoolerRecipe) parsedRecipe; // Try catch just in case
+            } catch (Exception e) {
+                LOGGER.error("Failed to load recipe from NBT", e);
+                this.processingRecipe = null;
+                this.progress = 0;
+                this.progressRequired = 0;
+            }
+        }
     }
 
     @Override
@@ -397,10 +374,17 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
             arg.put("input", wrapper.getInput().serializeNBT());
             arg.put("output", wrapper.getInput().serializeNBT());
         });
-        energyLazy.ifPresent(storage -> arg.put("energy", storage.serializeNBT()));
-        tank.ifPresent(tank -> {
-            arg.put("fluid", ((FluidTank) tank).writeToNBT(new CompoundTag()));
-        });
+        energy.ifPresent(storage -> arg.put("energy", storage.serializeNBT()));
+        tank.ifPresent(tank -> arg.put("fluid", ((FluidTank) tank).writeToNBT(new CompoundTag())));
+
+        // Write the progress
+        arg.putInt("progress", this.progress);
+        arg.putInt("progressRequired", this.progressRequired);
+
+        // Write the recipe id
+        if (this.processingRecipe != null) {
+            arg.putString("recipe", this.processingRecipe.getId().toString());
+        }
     }
 
     @Override
@@ -426,37 +410,60 @@ public class SuperCoolerBlockEntity extends BlockEntity implements MenuProvider 
         load(pkt.getTag());
     }
 
-    public static class CustomEnergy extends EnergyStorage {
-        BlockEntity entity;
+    @Override
+    public int getEnergy() {
+        return energy.map(IEnergyStorage::getEnergyStored).orElse(0);
+    }
 
-        public CustomEnergy(BlockEntity blockEntity) {
-            super(100000, 1000, 1000);
-            entity = blockEntity;
+    @Override
+    public int getMaxEnergy() {
+        return energy.map(IEnergyStorage::getMaxEnergyStored).orElse(0);
+    }
 
-        }
-        @Override
-        public int receiveEnergy(int maxReceive, boolean simulate) {
-            var result = super.receiveEnergy(maxReceive, simulate);
-            if (!simulate) {
-                this.entity.setChanged();
+    @Override
+    public int getFluid() {
+        return tank.map(IFluidTank::getFluid).map(FluidStack::getAmount).orElse(0);
+    }
+
+    @Override
+    public int getMaxFluid() {
+        return tank.map(IFluidTank::getCapacity).orElse(0);
+    }
+
+    @Override
+    public void setEnergy(int energy) {
+        this.energy.ifPresent(e -> e.overrideEnergy(energy));
+    }
+
+    @Override
+    public void setFluid(int fluid) {
+        this.tank.ifPresent(t -> {
+            var stack = new FluidStack(t.getFluid().getFluid(), fluid);
+            if (stack.getAmount() > t.getFluidAmount()) {
+                t.fill(stack, IFluidHandler.FluidAction.EXECUTE);
+            } else {
+                t.drain(t.getFluidAmount() - stack.getAmount(), IFluidHandler.FluidAction.EXECUTE);
             }
-            return result;
-        }
+        });
+    }
 
-        @Override
-        public int extractEnergy(int maxExtract, boolean simulate) {
-            var result = super.extractEnergy(maxExtract, simulate);
-            if (!simulate) {
-                this.entity.setChanged();
-            }
-            return result;
-        }
+    @Override
+    public int getProgress() {
+        return progress;
+    }
 
-        public void setEnergy(int energy, boolean update) {
-            this.energy = energy;
-            if (update) {
-                this.entity.setChanged();
-            }
-        }
+    @Override
+    public int getMaxProgress() {
+        return progressRequired;
+    }
+
+    @Override
+    public void setProgress(int progress) {
+        this.progress = progress;
+    }
+
+    @Override
+    public void setMaxProgress(int maxProgress) {
+        this.progressRequired = maxProgress;
     }
 }

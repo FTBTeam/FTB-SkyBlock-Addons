@@ -113,6 +113,9 @@ public class ToolsData {
             this.addBlock(ToolsRegistry.DIAMOND_AUTO_HAMMER, "Diamond Auto-hammer");
             this.addBlock(ToolsRegistry.NETHERITE_AUTO_HAMMER, "Netherite Auto-hammer");
 
+            this.addBlock(ToolsRegistry.FUSING_MACHINE, "Fusing Machine");
+            this.addBlock(ToolsRegistry.SUPER_COOLER, "Super Cooler");
+
             this.add("screens.ftbsba.select_start_group", "Select a group");
             this.add("screens.ftbsba.select_start", "Select a start");
             this.add("screens.ftbsba.selected_start", "Selected start");
@@ -137,6 +140,11 @@ public class ToolsData {
             this.add("config.jade.plugin_ftbsba.blocks", "FTB Skyblock Addons Blocks");
             this.add("container.ftbsba.super_cooler", "Super Cooler");
             this.add("container.ftbsba.fusing_machine", "Fusing Machine");
+
+            this.add("ftbsba.jei.recipe.fusing", "Fusing");
+            this.add("ftbsba.jei.recipe.super_cooler", "Super Cooler");
+            this.add("ftbsba.jei.recipe.hammer", "Hammering");
+            this.add("ftbsba.jei.recipe.crook", "Crooks");
         }
     }
 

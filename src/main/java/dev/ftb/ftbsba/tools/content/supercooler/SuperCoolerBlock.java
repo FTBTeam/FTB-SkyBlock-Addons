@@ -1,5 +1,6 @@
 package dev.ftb.ftbsba.tools.content.supercooler;
 
+import dev.ftb.ftbsba.tools.content.fusion.FusingMachineBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -42,5 +43,21 @@ public class SuperCoolerBlock extends Block implements EntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> entityType) {
         return SuperCoolerBlockEntity::ticker;
+    }
+
+    @Override
+    public void onRemove(BlockState arg, Level arg2, BlockPos arg3, BlockState arg4, boolean bl) {
+        super.onRemove(arg, arg2, arg3, arg4, bl);
+
+        BlockEntity entity = arg2.getBlockEntity(arg3);
+        if (!(entity instanceof SuperCoolerBlockEntity superCoolerEntity)) {
+            return;
+        }
+
+        superCoolerEntity.ioWrapper.ifPresent(handler -> {
+            for (int i = 0; i < handler.getSlots(); i++) {
+                Block.popResource(arg2, arg3, handler.getStackInSlot(i));
+            }
+        });
     }
 }

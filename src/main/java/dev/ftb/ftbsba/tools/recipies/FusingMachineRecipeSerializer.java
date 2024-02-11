@@ -29,7 +29,7 @@ public class FusingMachineRecipeSerializer implements RecipeSerializer<FusingMac
         recipe.fluidResult = FluidStackSerializer.deserialize(fluidResult);
         recipe.energyComponent = SuperCoolerRecipe.EnergyComponent.fromJson(json.get("energy"));
 
-        return null;
+        return recipe;
     }
 
     @Override

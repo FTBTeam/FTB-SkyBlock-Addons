@@ -52,6 +52,8 @@ public class JEIPlugin implements IModPlugin {
     public void registerCategories(IRecipeCategoryRegistration r) {
         r.addRecipeCategories(new HammerCategory(r.getJeiHelpers().getGuiHelper()));
         r.addRecipeCategories(new CrookCategory(r.getJeiHelpers().getGuiHelper()));
+        r.addRecipeCategories(new FusingMachineCategory(r.getJeiHelpers().getGuiHelper()));
+        r.addRecipeCategories(new SuperCoolerCategory(r.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
@@ -59,32 +61,16 @@ public class JEIPlugin implements IModPlugin {
         Level level = Minecraft.getInstance().level;
         r.addRecipes(HammerCategory.TYPE, level.getRecipeManager().getRecipesFor(ToolsRegistry.HAMMER_RECIPE_TYPE.get(), NoInventory.INSTANCE, level));
         r.addRecipes(CrookCategory.TYPE, level.getRecipeManager().getRecipesFor(ToolsRegistry.CROOK_RECIPE_TYPE.get(), NoInventory.INSTANCE, level));
-
-        // CauldronRecipe crap
-        FluidStack out = new FluidStack(Fluids.WATER, 333);
-        List<ItemStack> leaves = new ArrayList<>();
-        List<ItemStack> saplings = new ArrayList<>();
-
-        for (Block block : ForgeRegistries.BLOCKS) {
-            if (block instanceof LeavesBlock) {
-                Item item = block.asItem();
-
-                if (item != Items.AIR) {
-                    leaves.add(item.getDefaultInstance());
-                }
-            } else if (block instanceof SaplingBlock) {
-                Item item = block.asItem();
-
-                if (item != Items.AIR) {
-                    saplings.add(item.getDefaultInstance());
-                }
-            }
-        }
+        r.addRecipes(FusingMachineCategory.TYPE, level.getRecipeManager().getRecipesFor(ToolsRegistry.FUSING_MACHINE_RECIPE_TYPE.get(), NoInventory.INSTANCE, level));
+        r.addRecipes(SuperCoolerCategory.TYPE, level.getRecipeManager().getRecipesFor(ToolsRegistry.SUPER_COOLER_RECIPE_TYPE.get(), NoInventory.INSTANCE, level));
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration r) {
         HAMMERS.forEach(hammer -> r.addRecipeCatalyst(new ItemStack(hammer.get()), HammerCategory.TYPE));
         CROOKS.forEach(crook -> r.addRecipeCatalyst(new ItemStack(crook.get()), CrookCategory.TYPE));
+
+        r.addRecipeCatalyst(new ItemStack(ToolsRegistry.FUSING_MACHINE_BLOCK_ITEM.get()), FusingMachineCategory.TYPE);
+        r.addRecipeCatalyst(new ItemStack(ToolsRegistry.SUPER_COOLER_BLOCK_ITEM.get()), SuperCoolerCategory.TYPE);
     }
 }
