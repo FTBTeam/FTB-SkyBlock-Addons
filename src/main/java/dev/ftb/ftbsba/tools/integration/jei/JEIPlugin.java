@@ -2,12 +2,15 @@ package dev.ftb.ftbsba.tools.integration.jei;
 
 import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.content.fusion.FusingMachineContainer;
+import dev.ftb.ftbsba.tools.content.fusion.FusingMachineScreen;
+import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerContainer;
+import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerScreen;
 import dev.ftb.ftbsba.tools.recipies.NoInventory;
+import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
-import mezz.jei.api.registration.IRecipeCatalystRegistration;
-import mezz.jei.api.registration.IRecipeCategoryRegistration;
-import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -72,5 +75,34 @@ public class JEIPlugin implements IModPlugin {
 
         r.addRecipeCatalyst(new ItemStack(ToolsRegistry.FUSING_MACHINE_BLOCK_ITEM.get()), FusingMachineCategory.TYPE);
         r.addRecipeCatalyst(new ItemStack(ToolsRegistry.SUPER_COOLER_BLOCK_ITEM.get()), SuperCoolerCategory.TYPE);
+    }
+
+    @Override
+    public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        registration.addRecipeTransferHandler(
+                SuperCoolerContainer.class,
+                ToolsRegistry.SUPER_COOLER_CONTAINER.get(),
+                SuperCoolerCategory.TYPE,
+                36,
+                3,
+                0,
+                36
+        );
+
+        registration.addRecipeTransferHandler(
+                FusingMachineContainer.class,
+                ToolsRegistry.FUSING_MACHINE_CONTAINER.get(),
+                FusingMachineCategory.TYPE,
+                36,
+                2,
+                0,
+                36
+        );
+    }
+
+    @Override
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        registration.addRecipeClickArea(SuperCoolerScreen.class, 80, 28, 22, 16, SuperCoolerCategory.TYPE);
+        registration.addRecipeClickArea(FusingMachineScreen.class, 91, 28, 22, 16, FusingMachineCategory.TYPE);
     }
 }

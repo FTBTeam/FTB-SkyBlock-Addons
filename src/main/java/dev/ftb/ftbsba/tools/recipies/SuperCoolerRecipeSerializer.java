@@ -27,6 +27,7 @@ public class SuperCoolerRecipeSerializer implements RecipeSerializer<SuperCooler
 
         recipe.energyComponent = SuperCoolerRecipe.EnergyComponent.fromJson(jsonObject.get("energy"));
         recipe.result = ShapedRecipe.itemStackFromJson(jsonObject.get("result").getAsJsonObject());
+        recipe.fluidIngredient = FusingMachineRecipeSerializer.FluidStackSerializer.deserialize(jsonObject.get("fluid").getAsJsonObject());
 
         return recipe;
     }
@@ -46,6 +47,7 @@ public class SuperCoolerRecipeSerializer implements RecipeSerializer<SuperCooler
         recipe.ingredients.addAll(Arrays.asList(ingredients));
         recipe.energyComponent = energyComponent;
         recipe.result = arg2.readItem();
+        recipe.fluidIngredient = arg2.readFluidStack();
 
         return recipe;
     }
@@ -60,5 +62,6 @@ public class SuperCoolerRecipeSerializer implements RecipeSerializer<SuperCooler
 
         arg2.energyComponent.toNetwork(arg);
         arg.writeItem(arg2.result);
+        arg.writeFluidStack(arg2.fluidIngredient);
     }
 }
