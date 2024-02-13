@@ -4,7 +4,10 @@ import dev.ftb.ftbsba.config.FTBSAConfig;
 import dev.ftb.ftbsba.tools.ToolsClient;
 import dev.ftb.ftbsba.tools.ToolsMain;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.content.core.RecipeCaches;
+import dev.ftb.ftbsba.tools.net.NetworkHandler;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -23,6 +26,7 @@ public class FTBSBA {
     public FTBSBA() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, FTBSAConfig.COMMON_CONFIG);
 
+        IEventBus forgeBus = MinecraftForge.EVENT_BUS;
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         // Register everything that's part of the tools system
@@ -30,6 +34,10 @@ public class FTBSBA {
 
         modBus.addListener(this::clientSetup);
         modBus.addListener(this::postSetup);
+
+        forgeBus.addListener(this::addReloadListeners);
+
+        NetworkHandler.init();
 
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -40,5 +48,9 @@ public class FTBSBA {
 
     public void postSetup(FMLLoadCompleteEvent event) {
         ToolsMain.setup();
+    }
+
+    private void addReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(new RecipeCaches.ReloadListener());
     }
 }

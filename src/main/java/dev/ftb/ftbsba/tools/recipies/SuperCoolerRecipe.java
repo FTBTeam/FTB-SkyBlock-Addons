@@ -18,8 +18,8 @@ import java.util.List;
 
 public class SuperCoolerRecipe implements Recipe<NoInventory> {
     private final ResourceLocation id;
-    public String group;
-    public List<Ingredient> ingredients;
+    public final String group;
+    public final List<Ingredient> ingredients;
     public EnergyComponent energyComponent;
     public FluidStack fluidIngredient;
 

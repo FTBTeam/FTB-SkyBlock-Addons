@@ -11,6 +11,7 @@ import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.*;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -30,21 +31,21 @@ import java.util.*;
 @JeiPlugin
 public class JEIPlugin implements IModPlugin {
     public static final ResourceLocation FTBSBTOOLS_JEI = new ResourceLocation(FTBSBA.MOD_ID, "jei");
-    public static HashSet<RegistryObject<? extends Item>> HAMMERS = new LinkedHashSet<>() {{
-        this.add(ToolsRegistry.STONE_HAMMER);
-        this.add(ToolsRegistry.IRON_HAMMER);
-        this.add(ToolsRegistry.GOLD_HAMMER);
-        this.add(ToolsRegistry.DIAMOND_HAMMER);
-        this.add(ToolsRegistry.NETHERITE_HAMMER);
-        this.add(ToolsRegistry.IRON_AUTO_HAMMER_BLOCK_ITEM);
-        this.add(ToolsRegistry.GOLD_AUTO_HAMMER_BLOCK_ITEM);
-        this.add(ToolsRegistry.DIAMOND_AUTO_HAMMER_BLOCK_ITEM);
-        this.add(ToolsRegistry.NETHERITE_AUTO_HAMMER_BLOCK_ITEM);
-    }};
+    public static final Set<RegistryObject<? extends Item>> HAMMERS = Util.make(new LinkedHashSet<>(), set -> {
+        set.add(ToolsRegistry.STONE_HAMMER);
+        set.add(ToolsRegistry.IRON_HAMMER);
+        set.add(ToolsRegistry.GOLD_HAMMER);
+        set.add(ToolsRegistry.DIAMOND_HAMMER);
+        set.add(ToolsRegistry.NETHERITE_HAMMER);
+        set.add(ToolsRegistry.IRON_AUTO_HAMMER_BLOCK_ITEM);
+        set.add(ToolsRegistry.GOLD_AUTO_HAMMER_BLOCK_ITEM);
+        set.add(ToolsRegistry.DIAMOND_AUTO_HAMMER_BLOCK_ITEM);
+        set.add(ToolsRegistry.NETHERITE_AUTO_HAMMER_BLOCK_ITEM);
+    });
 
-    public static HashSet<RegistryObject<Item>> CROOKS = new HashSet<>() {{
-        this.add(ToolsRegistry.CROOK);
-    }};
+    public static final Set<RegistryObject<Item>> CROOKS = Util.make(new HashSet<>(), set -> {
+        set.add(ToolsRegistry.CROOK);
+    });
 
     @Override
     public ResourceLocation getPluginUid() {

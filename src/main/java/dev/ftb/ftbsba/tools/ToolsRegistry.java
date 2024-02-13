@@ -133,6 +133,9 @@ public interface ToolsRegistry {
         @Override
         public void appendHoverText(ItemStack arg, @Nullable Level arg2, List<Component> list, TooltipFlag arg3) {
             list.add(tooltip);
+
+            // call superclass so blocks can add extra info, e.g. stored power/fluid
+            super.appendHoverText(arg, arg2, list, arg3);
         }
     }
 }

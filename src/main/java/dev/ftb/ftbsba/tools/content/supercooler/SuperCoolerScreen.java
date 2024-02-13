@@ -6,9 +6,7 @@ import dev.ftb.ftbsba.tools.content.core.FluidAndEnergyScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidTank;
 import org.jetbrains.annotations.Nullable;
 
 public class SuperCoolerScreen extends FluidAndEnergyScreen<SuperCoolerContainer> {
@@ -29,37 +27,31 @@ public class SuperCoolerScreen extends FluidAndEnergyScreen<SuperCoolerContainer
 
     @Override
     public int getEnergyAmount() {
-        var data = this.menu.containerData;
-        return (data.get(0) & 0xFFFF) | (data.get(1) << 16);
+        return menu.blockEntity.getEnergy();
     }
 
     @Override
     public int getEnergyCapacity() {
-        return this.menu.entity.energy.map(IEnergyStorage::getMaxEnergyStored).orElse(0);
-    }
-
-    @Override
-    public int getFluidAmount() {
-        return this.menu.containerData.get(2);
+        return this.menu.blockEntity.getMaxEnergy();
     }
 
     @Override
     public int getFluidCapacity() {
-        return this.menu.entity.tank.map(IFluidTank::getCapacity).orElse(0);
+        return this.menu.blockEntity.getMaxFluid();
     }
 
     @Override
     public @Nullable FluidStack getFluidStack() {
-        return this.menu.entity.tank.map(IFluidTank::getFluid).orElse(null);
+        return this.menu.blockEntity.getFluid();
     }
 
     @Override
     public int getProgress() {
-        return this.menu.containerData.get(3);
+        return menu.blockEntity.getProgress();
     }
 
     @Override
     public int getProgressRequired() {
-        return this.menu.containerData.get(4);
+        return menu.blockEntity.getMaxProgress();
     }
 }

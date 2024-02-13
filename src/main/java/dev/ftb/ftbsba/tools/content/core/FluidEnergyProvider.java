@@ -1,13 +1,16 @@
 package dev.ftb.ftbsba.tools.content.core;
 
+import net.minecraftforge.fluids.FluidStack;
+
 public interface FluidEnergyProvider {
     int getEnergy();
     int getMaxEnergy();
 
-    int getFluid();
-    int getMaxFluid();
+    FluidStack getFluid();
 
-    void setFluid(int fluid);
+    void setFluid(FluidStack fluid);
+
+    int getMaxFluid();
 
     void setEnergy(int energy);
 

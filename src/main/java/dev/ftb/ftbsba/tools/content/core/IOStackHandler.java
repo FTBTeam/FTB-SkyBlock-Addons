@@ -11,7 +11,7 @@ public class IOStackHandler implements IItemHandler {
     ItemStackHandler input;
     ItemStackHandler output;
 
-    public  IOStackHandler(int inputSlots, int outputSlots, BiConsumer<IOStackHandler, IO> onChange) {
+    public IOStackHandler(int inputSlots, int outputSlots, BiConsumer<IOStackHandler, IO> onChange) {
         this.input = new EmittingStackHandler(inputSlots, (contents) -> onChange.accept(this, IO.INPUT));
         this.output = new EmittingStackHandler(outputSlots, (contents) -> onChange.accept(this, IO.OUTPUT));
     }

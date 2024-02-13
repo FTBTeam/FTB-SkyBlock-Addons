@@ -3,104 +3,94 @@ package dev.ftb.ftbsba.tools.content.fusion;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
 import dev.ftb.ftbsba.tools.content.core.*;
 import dev.ftb.ftbsba.tools.recipies.FusingMachineRecipe;
-import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.MenuProvider;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidTank;
 import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
-import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
-public class FusingMachineBlockEntity extends BlockEntity implements MenuProvider, FluidEnergyProvider, ProgressProvider {
-    public LazyOptional<EmittingEnergy> energy = LazyOptional.of(() -> new EmittingEnergy(100000, 10000, 10000, (energy) -> this.setChanged()));
-    public LazyOptional<ExtractOnlyFluidTank> tank = LazyOptional.of(() -> new ExtractOnlyFluidTank(10000, (tank) -> this.setChanged()));
-    public LazyOptional<EmittingStackHandler> input = LazyOptional.of(() -> new EmittingStackHandler(2, (contents) -> {
+public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
+    private final EmittingEnergy energyHandler = new EmittingEnergy(100000, 10000, 10000, (energy) -> this.setChanged());
+    private final ExtractOnlyFluidTank fluidHandler = new ExtractOnlyFluidTank(10000, (tank) -> this.setChanged());
+    private final EmittingStackHandler itemHandler = new EmittingStackHandler(2, (contents) -> {
         this.setChanged();
         this.progress = 0;
-    }));
+    });
 
-    public int progress = 0;
-    public int progressRequired = 0;
+    private final LazyOptional<EmittingEnergy> energy = LazyOptional.of(() -> energyHandler);
+    private final LazyOptional<ExtractOnlyFluidTank> tank = LazyOptional.of(() -> fluidHandler);
+    private final LazyOptional<EmittingStackHandler> input = LazyOptional.of(() -> itemHandler);
 
-    public FusingMachineRecipe currentRecipe = null;
-
-    FluidEnergyProcessorContainerData containerData = new FluidEnergyProcessorContainerData(this, this);
+    private int progress = 0;
+    private int progressRequired = 0;
+    private FusingMachineRecipe currentRecipe = null;
+    private final FluidEnergyProcessorContainerData containerData = new FluidEnergyProcessorContainerData(this, this);
 
     public FusingMachineBlockEntity(BlockPos pos, BlockState state) {
         super(ToolsRegistry.FUSING_MACHINE_BLOCK_ENTITY.get(), pos, state);
     }
 
-    public static <T extends BlockEntity> void ticker(Level level, BlockPos pos, BlockState state, T t) {
-        if (!(t instanceof FusingMachineBlockEntity entity)) {
-            return;
-        }
-
-        if (level.isClientSide) {
-            return;
-        }
-
-        // Requires input items, energy and the fluid tank to be not full and the correct fluid for the recipe
-        if (!entity.hasEnergy() || !entity.hasOccupiedInputSlots()) {
+    @Override
+    public void tickServer() {
+        if (!hasEnergy() || !hasOccupiedInputSlots()) {
             return;
         }
 
         // We need to find the recipe before we can check the fluid tank
-        if (entity.progress == 0) {
-            var recipe = entity.testForRecipe();
-            if (recipe == null) {
-                return;
-            }
+        if (progress == 0) {
+            currentRecipe = RecipeCaches.FUSING_MACHINE.getCachedRecipe(this::findValidRecipe, itemHandler, null)
+                    .orElse(null);
 
-            // Test for tank validity
-            // TODO: Add fluid check
-            var tank = entity.tank.orElseThrow(RuntimeException::new);
-            if (!tank.isEmpty() && !tank.getFluid().isFluidEqual(recipe.fluidResult)) {
-                return;
-            }
+            if (currentRecipe != null) {
+                // Test for tank validity
+                // TODO: Add fluid check
+                var tank = fluidHandler;
+                if (!tank.isEmpty() && !tank.getFluid().isFluidEqual(currentRecipe.fluidResult)) {
+                    setActive(false);
+                    return;
+                }
 
-            // Otherwise the fluid is either empty or the same as the recipe
-            if (!tank.isEmpty() && tank.getFluid().getAmount() + recipe.fluidResult.getAmount() > tank.getCapacity()) {
-                // Don't allow the fluid to overflow
-                return;
-            }
+                // Otherwise the fluid is either empty or the same as the recipe
+                if (!tank.isEmpty() && tank.getFluid().getAmount() + currentRecipe.fluidResult.getAmount() > tank.getCapacity()) {
+                    // Don't allow the fluid to overflow
+                    setActive(false);
+                    return;
+                }
 
-            // Finally, we can start the process
-            entity.progressRequired = recipe.energyComponent.ticksToProcess();
-            entity.progress = 1; // Start the progress
-            entity.currentRecipe = recipe;
+                // Finally, we can start the process
+                progressRequired = currentRecipe.energyComponent.ticksToProcess();
+                progress = 1; // Start the progress
+            } else {
+                setActive(false);
+            }
         }
 
-        if (entity.currentRecipe != null) {
-            if (entity.progress == entity.progressRequired) {
-                // We're done... Ouput the result
-                entity.extractRecipe();
-                entity.breakProgress();
+        if (currentRecipe != null) {
+            if (progress == progressRequired) {
+                // We're done... Output the result
+                extractRecipe();
+                breakProgress();
             } else {
-                entity.useEnergy();
-                entity.progress ++;
+                setActive(true);
+                useEnergy();
+                progress ++;
             }
         }
     }
@@ -108,18 +98,17 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
     //#region BlockEntity processing
 
     private void extractRecipe() {
-        var inventory = input.orElseThrow(RuntimeException::new);
-        var tank = this.tank.orElseThrow(RuntimeException::new);
+        var inventory = itemHandler;
 
         var requiredItems = this.currentRecipe.ingredients;
         // Try and remove the items from the input slots
         for (var ingredient : requiredItems) {
             for (int i = 0; i < inventory.getSlots(); i++) {
-                var stack = inventory.getStackInSlot(i);
-                if (ingredient.test(stack)) {
-                    var result = inventory.extractItem(i, 1, true);
-                    if (result.isEmpty()) {
+                if (ingredient.test(inventory.getStackInSlot(i))) {
+                    if (inventory.extractItem(i, 1, true).isEmpty()) {
+                        // this shouldn't happen, but let's be defensive
                         breakProgress();
+                        currentRecipe = null;
                         return;
                     }
                 }
@@ -128,15 +117,14 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
 
         for (var ingredient : requiredItems) {
             for (int i = 0; i < inventory.getSlots(); i++) {
-                var stack = inventory.getStackInSlot(i);
-                if (ingredient.test(stack)) {
+                if (ingredient.test(inventory.getStackInSlot(i))) {
                     // This logically can't be false due to the simulation above
                     inventory.extractItem(i, 1, false);
                 }
             }
         }
 
-        tank.forceFill(this.currentRecipe.fluidResult, IFluidHandler.FluidAction.EXECUTE);
+        fluidHandler.forceFill(this.currentRecipe.fluidResult, IFluidHandler.FluidAction.EXECUTE);
     }
 
     private void useEnergy() {
@@ -144,101 +132,61 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
             return;
         }
 
-        if (!this.energy.isPresent()) {
-            breakProgress();
-            return;
-        }
-
-        EmittingEnergy emittingEnergy = this.energy.orElseThrow(RuntimeException::new);
-        var result = emittingEnergy.extractEnergy(this.currentRecipe.energyComponent.fePerTick(), true);
+        var result = energyHandler.extractEnergy(this.currentRecipe.energyComponent.fePerTick(), true);
         if (result < this.currentRecipe.energyComponent.fePerTick()) {
             breakProgress();
             return;
         }
 
-        emittingEnergy.extractEnergy(this.currentRecipe.energyComponent.fePerTick(), false);
+        energyHandler.extractEnergy(this.currentRecipe.energyComponent.fePerTick(), false);
     }
 
     private void breakProgress() {
         this.progress = 0;
         this.progressRequired = 0;
-        this.currentRecipe = null;
     }
 
     private boolean hasEnergy() {
-        return energy.map(EmittingEnergy::getEnergyStored).orElse(0) > 0;
+        return energyHandler.getEnergyStored() > 0;
     }
 
     private boolean hasOccupiedInputSlots() {
-        if (!input.isPresent()) {
-            return false;
-        }
-
-        var hasItems = false;
-        var handler = input.orElseThrow(RuntimeException::new);
-
-        for (int i = 0; i < handler.getSlots(); i++) {
-            if (!handler.getStackInSlot(i).isEmpty()) {
-                hasItems = true;
-                break;
+        for (int i = 0; i < itemHandler.getSlots(); i++) {
+            if (!itemHandler.getStackInSlot(i).isEmpty()) {
+                return true;
             }
         }
-
-        return hasItems;
+        return false;
     }
 
-    @Nullable
-    private FusingMachineRecipe testForRecipe() {
-        if (!input.isPresent()) {
-            return null;
-        }
+    private Optional<FusingMachineRecipe> findValidRecipe() {
+        return level.getRecipeManager().getAllRecipesFor(ToolsRegistry.FUSING_MACHINE_RECIPE_TYPE.get()).stream()
+                .filter(this::recipeMatchesInput)
+                .findFirst();
+    }
 
-
-        var handler = input.orElseThrow(RuntimeException::new);
-
-        // This is an immutable hash map so the lookup is fast
-        var recipes = level.getRecipeManager().getAllRecipesFor(ToolsRegistry.FUSING_MACHINE_RECIPE_TYPE.get());
-
-        if (recipes.isEmpty()) {
-            return null;
-        }
-
-        for (var recipe : recipes) {
-            List<Ingredient> ingredients = recipe.ingredients.stream().filter(ingredient -> !ingredient.isEmpty()).toList();
-
-            NonNullList<Ingredient> foundItems = NonNullList.create();
-            for (int i = 0; i < handler.getSlots(); i++) {
-                if (handler.getStackInSlot(i).isEmpty()) {
-                    // Don't waste time checking empty slots
-                    continue;
-                }
-
-                for (Ingredient ingredient : ingredients) {
-                    if (ingredient.test(handler.getStackInSlot(i))) {
-                        foundItems.add(ingredient);
+    private boolean recipeMatchesInput(FusingMachineRecipe recipe) {
+        NonNullList<Ingredient> foundIngredients = NonNullList.create();
+        for (int i = 0; i < itemHandler.getSlots(); i++) {
+            if (!itemHandler.getStackInSlot(i).isEmpty()) {
+                for (Ingredient ingredient : recipe.ingredients) {
+                    if (ingredient.test(itemHandler.getStackInSlot(i))) {
+                        foundIngredients.add(ingredient);
                     }
                 }
             }
-
-            for (var ingredient : recipe.ingredients) {
-                if (!foundItems.contains(ingredient)) {
-                    return null;
-                }
-            }
-
-            return recipe;
         }
 
-        return null;
+        return foundIngredients.containsAll(recipe.ingredients);
     }
 
-    //#endregion
+//#endregion
 
-    //#region BlockEntity setup and syncing
+//#region BlockEntity setup and syncing
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.ftbsba.fusing_machine"); // TODO: Add translation
+        return Component.translatable("container.ftbsba.fusing_machine");
     }
 
     @Override
@@ -257,25 +205,28 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int i, Inventory arg, Player arg2) {
-        return new FusingMachineContainer(i, containerData, arg, arg2, this);
+        if (arg2 instanceof ServerPlayer sp) {
+            fluidHandler.needSync(sp);
+        }
+        return new FusingMachineContainer(i, arg, getBlockPos());
     }
 
     @Override
     public void load(CompoundTag arg) {
         super.load(arg);
 
-        input.ifPresent(input -> input.deserializeNBT(arg.getCompound("input")));
-        energy.ifPresent(storage -> storage.deserializeNBT(arg.get("energy")));
-        tank.ifPresent(tank -> tank.readFromNBT(arg.getCompound("fluid")));
+        itemHandler.deserializeNBT(arg.getCompound("input"));
+        energyHandler.deserializeNBT(arg.get("energy"));
+        fluidHandler.readFromNBT(arg.getCompound("fluid"));
     }
 
     @Override
     protected void saveAdditional(CompoundTag arg) {
         super.saveAdditional(arg);
 
-        input.ifPresent(input -> arg.put("input",input.serializeNBT()));
-        energy.ifPresent(storage -> arg.put("energy", storage.serializeNBT()));
-        tank.ifPresent(tank -> arg.put("fluid", tank.writeToNBT(new CompoundTag())));
+        arg.put("input", itemHandler.serializeNBT());
+        arg.put("energy", energyHandler.serializeNBT());
+        arg.put("fluid", fluidHandler.writeToNBT(new CompoundTag()));
     }
 
     @Override
@@ -284,11 +235,6 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
         input.invalidate();
         energy.invalidate();
         tank.invalidate();
-    }
-
-    @Override
-    public ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this, entity -> this.getUpdateTag());
     }
 
     @Override
@@ -304,43 +250,38 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
         load(tag);
     }
 
-    @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-        load(pkt.getTag());
-    }
+//#endregion
 
-    //#endregion
-
-    //#region Data Syncing helper methods
+//#region Data Syncing helper methods
 
     @Override
     public int getEnergy() {
-        return energy.map(EmittingEnergy::getEnergyStored).orElse(0);
+        return energyHandler.getEnergyStored();
     }
 
     @Override
     public int getMaxEnergy() {
-        return energy.map(EmittingEnergy::getMaxEnergyStored).orElse(0);
+        return energyHandler.getMaxEnergyStored();
     }
 
     @Override
-    public int getFluid() {
-        return tank.map(IFluidTank::getFluidAmount).orElse(0);
+    public FluidStack getFluid() {
+        return fluidHandler.getFluid();
     }
 
     @Override
     public int getMaxFluid() {
-        return tank.map(IFluidTank::getCapacity).orElse(0);
+        return fluidHandler.getCapacity();
     }
 
     @Override
-    public void setFluid(int fluid) {
-        tank.ifPresent(t -> t.overrideFluidAmount(fluid));
+    public void setFluid(FluidStack fluid) {
+        fluidHandler.overrideFluidStack(fluid);
     }
 
     @Override
     public void setEnergy(int energy) {
-        this.energy.ifPresent(e -> e.overrideEnergy(energy));
+        energyHandler.overrideEnergy(energy);
     }
 
     @Override
@@ -363,7 +304,22 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
         this.progressRequired = maxProgress;
     }
 
-    //#endregion
+    @Override
+    public EmittingStackHandler getItemHandler() {
+        return itemHandler;
+    }
+
+    @Override
+    public ContainerData getContainerData() {
+        return containerData;
+    }
+
+    @Override
+    public void syncFluidTank() {
+        fluidHandler.sync(this);
+    }
+
+//#endregion
 
     public static class ExtractOnlyFluidTank extends EmittingFluidTank {
         public ExtractOnlyFluidTank(int capacity, Consumer<EmittingFluidTank> listener) {
@@ -379,12 +335,8 @@ public class FusingMachineBlockEntity extends BlockEntity implements MenuProvide
             return super.fill(resource, action);
         }
 
-        public void overrideFluidAmount(int amount) {
-            if (this.fluid.isEmpty()) {
-                return;
-            }
-
-            this.fluid.setAmount(amount);
+        public void overrideFluidStack(FluidStack stack) {
+            this.fluid = stack;
         }
     }
 }

@@ -15,13 +15,12 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 public abstract class FluidAndEnergyScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
-    private int fluidXOffset;
-    private int progressXOffset;
-    private ResourceLocation texture;
+    private final int fluidXOffset;
+    private final int progressXOffset;
+    private final ResourceLocation texture;
 
     public FluidAndEnergyScreen(T arg, Inventory arg2, Component arg3, int fluidXOffset, int progressXOffset, ResourceLocation texture) {
         super(arg, arg2, arg3);
@@ -38,7 +37,7 @@ public abstract class FluidAndEnergyScreen<T extends AbstractContainerMenu> exte
             arg.pushPose();
             arg.translate(mouseX - 5, mouseY, 600);
             arg.scale(0.6F, 0.6F, 0F);
-            this.renderTooltip(arg, Component.literal(this.getFluidAmount() + " / " + this.getFluidCapacity() + " mB"), 0, 0);
+            this.renderTooltip(arg, Component.literal(this.getFluidStack().getAmount() + " / " + this.getFluidCapacity() + " mB"), 0, 0);
             arg.popPose();
         }
 
@@ -92,7 +91,7 @@ public abstract class FluidAndEnergyScreen<T extends AbstractContainerMenu> exte
         var atlasSprite = Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(texture);
 
         // Fluid amount
-        float fluidHeight = (float) this.getFluidAmount() / this.getFluidCapacity() * 65;
+        float fluidHeight = (float) this.getFluidStack().getAmount() / this.getFluidCapacity() * 65;
         int textureHeight = 16;
 
         int tilesRequired = (int) Math.ceil(fluidHeight / textureHeight);
@@ -124,7 +123,7 @@ public abstract class FluidAndEnergyScreen<T extends AbstractContainerMenu> exte
         arg.popPose();
 
         // Finally, draw the progress bar
-        if (this.getProgressRequired() != 0) {
+        if (this.getProgressRequired() > 0) {
             float computedPercentage = (float) this.getProgress() / this.getProgressRequired() * 24;
             this.blit(arg, this.leftPos + this.progressXOffset, this.topPos + 28, 203, 0, (int) computedPercentage + 1, 16);
         }
@@ -164,10 +163,8 @@ public abstract class FluidAndEnergyScreen<T extends AbstractContainerMenu> exte
     public abstract int getEnergyAmount();
     public abstract int getEnergyCapacity();
 
-    public abstract int getFluidAmount();
     public abstract int getFluidCapacity();
 
-    @Nullable
     public abstract FluidStack getFluidStack();
 
     public abstract int getProgress();
