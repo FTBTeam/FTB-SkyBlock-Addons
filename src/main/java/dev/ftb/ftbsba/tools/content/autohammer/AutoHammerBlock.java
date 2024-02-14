@@ -1,6 +1,7 @@
 package dev.ftb.ftbsba.tools.content.autohammer;
 
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.content.core.AbstractMachineBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.Item;
@@ -14,13 +15,11 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.CapabilityItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;
@@ -33,8 +32,6 @@ public class AutoHammerBlock extends Block implements EntityBlock {
     private final Supplier<Item> baseHammerItem;
     private final AutoHammerProperties props;
 
-    public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
-
     public static final VoxelShape EAST_WEST = Stream.of(Block.box(1, 4, 1, 15, 14, 15),Block.box(0, 4, 0, 2, 14, 2),Block.box(0, 4, 14, 2, 14, 16),Block.box(14, 4, 0, 16, 14, 2),Block.box(14, 4, 14, 16, 14, 16),Block.box(0, 0, 0, 16, 4, 16),Block.box(0, 14, 0, 16, 16, 16),Block.box(4, 4, 0, 12, 12, 2),Block.box(4, 4, 14, 12, 12, 16)).reduce((v1, v2) -> Shapes.join(v1, v2, OR)).get();
     public static final VoxelShape NORTH_SOUTH = Stream.of(Block.box(1, 4, 1, 15, 14, 15),Block.box(0, 4, 14, 2, 14, 16),Block.box(14, 4, 14, 16, 14, 16),Block.box(0, 4, 0, 2, 14, 2),Block.box(14, 4, 0, 16, 14, 2),Block.box(0, 0, 0, 16, 4, 16),Block.box(0, 14, 0, 16, 16, 16),Block.box(0, 4, 4, 2, 12, 12),Block.box(14, 4, 4, 16, 12, 12)).reduce((v1, v2) -> Shapes.join(v1, v2, OR)).get();
 
@@ -46,12 +43,12 @@ public class AutoHammerBlock extends Block implements EntityBlock {
 
         this.registerDefaultState(this.getStateDefinition().any()
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
-                .setValue(ACTIVE, false));
+                .setValue(AbstractMachineBlock.ACTIVE, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.HORIZONTAL_FACING, ACTIVE);
+        builder.add(BlockStateProperties.HORIZONTAL_FACING, AbstractMachineBlock.ACTIVE);
     }
 
     @Nullable

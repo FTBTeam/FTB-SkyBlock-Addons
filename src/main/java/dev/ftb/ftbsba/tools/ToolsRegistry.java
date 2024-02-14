@@ -1,21 +1,26 @@
 package dev.ftb.ftbsba.tools;
 
 import com.mojang.serialization.Codec;
+import dev.architectury.registry.registries.RegistrySupplier;
 import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.content.CrookItem;
 import dev.ftb.ftbsba.tools.content.HammerItem;
 import dev.ftb.ftbsba.tools.content.autohammer.AutoHammerBlock;
 import dev.ftb.ftbsba.tools.content.autohammer.AutoHammerBlockEntity;
 import dev.ftb.ftbsba.tools.content.autohammer.AutoHammerProperties;
+import dev.ftb.ftbsba.tools.content.fusion.FusingMachineBlock;
+import dev.ftb.ftbsba.tools.content.fusion.FusingMachineBlockEntity;
+import dev.ftb.ftbsba.tools.content.fusion.FusingMachineContainer;
+import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerBlock;
+import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerBlockEntity;
+import dev.ftb.ftbsba.tools.content.supercooler.SuperCoolerContainer;
 import dev.ftb.ftbsba.tools.loot.CrookModifier;
 import dev.ftb.ftbsba.tools.loot.HammerModifier;
-import dev.ftb.ftbsba.tools.recipies.CrookRecipe;
-import dev.ftb.ftbsba.tools.recipies.CrookRecipeSerializer;
-import dev.ftb.ftbsba.tools.recipies.HammerRecipe;
-import dev.ftb.ftbsba.tools.recipies.HammerRecipeSerializer;
+import dev.ftb.ftbsba.tools.recipies.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -24,6 +29,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.common.loot.IGlobalLootModifier;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -48,6 +54,7 @@ public interface ToolsRegistry {
     DeferredRegister<Codec<? extends IGlobalLootModifier>> LOOT_MODIFIERS_REGISTRY = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, FTBSBA.MOD_ID);
     DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZER_REGISTRY = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, FTBSBA.MOD_ID);
     DeferredRegister<RecipeType<?>> RECIPE_TYPE_REGISTRY = DeferredRegister.create(Registry.RECIPE_TYPE_REGISTRY, FTBSBA.MOD_ID);
+    DeferredRegister<MenuType<?>> CONTAINER_REGISTRY = DeferredRegister.create(ForgeRegistries.MENU_TYPES, FTBSBA.MOD_ID);
 
     // All the registries :D
     List<DeferredRegister<?>> REGISTERS = List.of(
@@ -56,7 +63,8 @@ public interface ToolsRegistry {
             BLOCK_ENTITY_REGISTRY,
             LOOT_MODIFIERS_REGISTRY,
             RECIPE_SERIALIZER_REGISTRY,
-            RECIPE_TYPE_REGISTRY
+            RECIPE_TYPE_REGISTRY,
+            CONTAINER_REGISTRY
     );
 
     // Hammers
@@ -75,23 +83,44 @@ public interface ToolsRegistry {
     RegistryObject<Block> DIAMOND_AUTO_HAMMER = BLOCK_REGISTRY.register("diamond_auto_hammer", () -> new AutoHammerBlock(DIAMOND_HAMMER, AutoHammerProperties.DIAMOND));
     RegistryObject<Block> NETHERITE_AUTO_HAMMER = BLOCK_REGISTRY.register("netherite_auto_hammer", () -> new AutoHammerBlock(NETHERITE_HAMMER, AutoHammerProperties.NETHERITE));
 
+    RegistryObject<Block> FUSING_MACHINE = BLOCK_REGISTRY.register("fusing_machine", FusingMachineBlock::new);
+    RegistryObject<Block> SUPER_COOLER = BLOCK_REGISTRY.register("super_cooler", SuperCoolerBlock::new);
+
     RegistryObject<BlockItem> IRON_AUTO_HAMMER_BLOCK_ITEM = ITEM_REGISTRY.register("iron_auto_hammer", () -> new ToolTipBlockItem(IRON_AUTO_HAMMER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.auto-hammers").withStyle(ChatFormatting.GRAY)));
     RegistryObject<BlockItem> GOLD_AUTO_HAMMER_BLOCK_ITEM = ITEM_REGISTRY.register("gold_auto_hammer", () -> new ToolTipBlockItem(GOLD_AUTO_HAMMER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.auto-hammers").withStyle(ChatFormatting.GRAY)));
     RegistryObject<BlockItem> DIAMOND_AUTO_HAMMER_BLOCK_ITEM = ITEM_REGISTRY.register("diamond_auto_hammer", () -> new ToolTipBlockItem(DIAMOND_AUTO_HAMMER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.auto-hammers").withStyle(ChatFormatting.GRAY)));
     RegistryObject<BlockItem> NETHERITE_AUTO_HAMMER_BLOCK_ITEM = ITEM_REGISTRY.register("netherite_auto_hammer", () -> new ToolTipBlockItem(NETHERITE_AUTO_HAMMER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.auto-hammers").withStyle(ChatFormatting.GRAY)));
+
+    RegistryObject<BlockItem> FUSING_MACHINE_BLOCK_ITEM = ITEM_REGISTRY.register("fusing_machine", () -> new ToolTipBlockItem(FUSING_MACHINE.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.fusing_machine").withStyle(ChatFormatting.GRAY)));
+    RegistryObject<BlockItem> SUPER_COOLER_BLOCK_ITEM = ITEM_REGISTRY.register("super_cooler", () -> new ToolTipBlockItem(SUPER_COOLER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.super_cooler").withStyle(ChatFormatting.GRAY)));
+
+    RegistryObject<MenuType<FusingMachineContainer>> FUSING_MACHINE_CONTAINER = CONTAINER_REGISTRY.register("fusing_machine", () -> IForgeMenuType.create(FusingMachineContainer::new));
+    RegistryObject<MenuType<SuperCoolerContainer>> SUPER_COOLER_CONTAINER = CONTAINER_REGISTRY.register("super_cooler", () -> IForgeMenuType.create(SuperCoolerContainer::new));
 
     RegistryObject<BlockEntityType<AutoHammerBlockEntity.Iron>> IRON_AUTO_HAMMER_BLOCK_ENTITY = BLOCK_ENTITY_REGISTRY.register("iron_auto_hammer", () -> BlockEntityType.Builder.of(AutoHammerBlockEntity.Iron::new, IRON_AUTO_HAMMER.get()).build(null));
     RegistryObject<BlockEntityType<AutoHammerBlockEntity.Gold>> GOLD_AUTO_HAMMER_BLOCK_ENTITY = BLOCK_ENTITY_REGISTRY.register("gold_auto_hammer", () -> BlockEntityType.Builder.of(AutoHammerBlockEntity.Gold::new, GOLD_AUTO_HAMMER.get()).build(null));
     RegistryObject<BlockEntityType<AutoHammerBlockEntity.Diamond>> DIAMOND_AUTO_HAMMER_BLOCK_ENTITY = BLOCK_ENTITY_REGISTRY.register("diamond_auto_hammer", () -> BlockEntityType.Builder.of(AutoHammerBlockEntity.Diamond::new, DIAMOND_AUTO_HAMMER.get()).build(null));
     RegistryObject<BlockEntityType<AutoHammerBlockEntity.Netherite>> NETHERITE_AUTO_HAMMER_BLOCK_ENTITY = BLOCK_ENTITY_REGISTRY.register("netherite_auto_hammer", () -> BlockEntityType.Builder.of(AutoHammerBlockEntity.Netherite::new, NETHERITE_AUTO_HAMMER.get()).build(null));
 
+    RegistryObject<BlockEntityType<FusingMachineBlockEntity>> FUSING_MACHINE_BLOCK_ENTITY = BLOCK_ENTITY_REGISTRY.register("fusing_machine", () -> BlockEntityType.Builder.of(FusingMachineBlockEntity::new, FUSING_MACHINE.get()).build(null));
+    RegistryObject<BlockEntityType<SuperCoolerBlockEntity>> SUPER_COOLER_BLOCK_ENTITY = BLOCK_ENTITY_REGISTRY.register("super_cooler", () -> BlockEntityType.Builder.of(SuperCoolerBlockEntity::new, SUPER_COOLER.get()).build(null));
+
+
     RegistryObject<Codec<? extends IGlobalLootModifier>> HAMMER_LOOT_MODIFIER = LOOT_MODIFIERS_REGISTRY.register("hammer_loot_modifier", () -> HammerModifier.CODEC);
     RegistryObject<Codec<? extends IGlobalLootModifier>> CROOK_LOOT_MODIFIER = LOOT_MODIFIERS_REGISTRY.register("crook_loot_modifier", () -> CrookModifier.CODEC);
 
-    RegistryObject<RecipeSerializer<?>> CROOK_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("crook", CrookRecipeSerializer::new);
     RegistryObject<RecipeType<CrookRecipe>> CROOK_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("crook", () -> new RecipeType<>() {});
-    RegistryObject<RecipeSerializer<?>> HAMMER_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("hammer", HammerRecipeSerializer::new);
+    RegistryObject<RecipeSerializer<?>> CROOK_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("crook", CrookRecipeSerializer::new);
+
     RegistryObject<RecipeType<HammerRecipe>> HAMMER_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("hammer", () -> new RecipeType<>() {});
+    RegistryObject<RecipeSerializer<?>> HAMMER_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("hammer", HammerRecipeSerializer::new);
+
+    RegistryObject<RecipeType<SuperCoolerRecipe>> SUPER_COOLER_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("super_cooler", () -> new RecipeType<>() {});
+    RegistryObject<RecipeSerializer<?>> SUPER_COOLER_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("super_cooler", SuperCoolerRecipeSerializer::new);
+
+    RegistryObject<RecipeType<FusingMachineRecipe>> FUSING_MACHINE_RECIPE_TYPE = RECIPE_TYPE_REGISTRY.register("fusing_machine", () -> new RecipeType<>() {});
+    RegistryObject<RecipeSerializer<?>> FUSING_MACHINE_RECIPE_SERIALIZER = RECIPE_SERIALIZER_REGISTRY.register("fusing_machine", FusingMachineRecipeSerializer::new);
+
 
     class ToolTipBlockItem extends BlockItem {
         private final Component tooltip;
@@ -104,6 +133,9 @@ public interface ToolsRegistry {
         @Override
         public void appendHoverText(ItemStack arg, @Nullable Level arg2, List<Component> list, TooltipFlag arg3) {
             list.add(tooltip);
+
+            // call superclass so blocks can add extra info, e.g. stored power/fluid
+            super.appendHoverText(arg, arg2, list, arg3);
         }
     }
 }

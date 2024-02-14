@@ -32,7 +32,7 @@ public class HammerCategory implements IRecipeCategory<HammerRecipe> {
 
     @Override
     public Component getTitle() {
-        return Component.literal("Hammering");
+        return Component.translatable("ftbsba.jei.recipe.hammer");
     }
 
     @Override

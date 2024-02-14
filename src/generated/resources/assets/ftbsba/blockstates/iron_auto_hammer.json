@@ -21,6 +21,26 @@
     {
       "apply": {
         "model": "ftbsba:block/iron_auto_hammer",
+        "y": 90
+      },
+      "when": {
+        "active": "false",
+        "facing": "east"
+      }
+    },
+    {
+      "apply": {
+        "model": "ftbsba:block/iron_auto_hammer_active",
+        "y": 90
+      },
+      "when": {
+        "active": "true",
+        "facing": "east"
+      }
+    },
+    {
+      "apply": {
+        "model": "ftbsba:block/iron_auto_hammer",
         "y": 180
       },
       "when": {
@@ -56,26 +76,6 @@
       "when": {
         "active": "true",
         "facing": "west"
-      }
-    },
-    {
-      "apply": {
-        "model": "ftbsba:block/iron_auto_hammer",
-        "y": 90
-      },
-      "when": {
-        "active": "false",
-        "facing": "east"
-      }
-    },
-    {
-      "apply": {
-        "model": "ftbsba:block/iron_auto_hammer_active",
-        "y": 90
-      },
-      "when": {
-        "active": "true",
-        "facing": "east"
       }
     }
   ]

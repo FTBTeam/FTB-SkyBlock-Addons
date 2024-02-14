@@ -46,7 +46,7 @@ public class CrookCategory implements IRecipeCategory<CrookRecipe> {
 
     @Override
     public Component getTitle() {
-        return Component.literal("Crooking");
+        return Component.translatable("ftbsba.jei.recipe.crook");
     }
 
     @Override
