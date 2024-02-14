@@ -37,6 +37,7 @@ import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 
 public interface ToolsRegistry {
@@ -91,7 +92,11 @@ public interface ToolsRegistry {
     RegistryObject<BlockItem> DIAMOND_AUTO_HAMMER_BLOCK_ITEM = ITEM_REGISTRY.register("diamond_auto_hammer", () -> new ToolTipBlockItem(DIAMOND_AUTO_HAMMER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.auto-hammers").withStyle(ChatFormatting.GRAY)));
     RegistryObject<BlockItem> NETHERITE_AUTO_HAMMER_BLOCK_ITEM = ITEM_REGISTRY.register("netherite_auto_hammer", () -> new ToolTipBlockItem(NETHERITE_AUTO_HAMMER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.auto-hammers").withStyle(ChatFormatting.GRAY)));
 
-    RegistryObject<BlockItem> FUSING_MACHINE_BLOCK_ITEM = ITEM_REGISTRY.register("fusing_machine", () -> new ToolTipBlockItem(FUSING_MACHINE.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.fusing_machine").withStyle(ChatFormatting.GRAY)));
+    RegistryObject<BlockItem> FUSING_MACHINE_BLOCK_ITEM = ITEM_REGISTRY.register("fusing_machine", () -> new ToolTipBlockItem(FUSING_MACHINE.get(), new Item.Properties().tab(CREATIVE_GROUP), List.of(
+            Component.translatable("ftbsba.tooltip.fusing_machine").withStyle(ChatFormatting.GRAY),
+            Component.translatable("ftbsba.tooltip.slowmelter").withStyle(ChatFormatting.GRAY).withStyle(ChatFormatting.ITALIC)
+    )));
+
     RegistryObject<BlockItem> SUPER_COOLER_BLOCK_ITEM = ITEM_REGISTRY.register("super_cooler", () -> new ToolTipBlockItem(SUPER_COOLER.get(), new Item.Properties().tab(CREATIVE_GROUP), Component.translatable("ftbsba.tooltip.super_cooler").withStyle(ChatFormatting.GRAY)));
 
     RegistryObject<MenuType<FusingMachineContainer>> FUSING_MACHINE_CONTAINER = CONTAINER_REGISTRY.register("fusing_machine", () -> IForgeMenuType.create(FusingMachineContainer::new));
@@ -123,16 +128,21 @@ public interface ToolsRegistry {
 
 
     class ToolTipBlockItem extends BlockItem {
-        private final Component tooltip;
+        private final List<Component> tooltip;
 
-        public ToolTipBlockItem(Block arg, Properties arg2, Component tooltip) {
+        public ToolTipBlockItem(Block arg, Properties arg2, List<Component> tooltip) {
             super(arg, arg2);
             this.tooltip = tooltip;
         }
 
+        public ToolTipBlockItem(Block arg, Properties arg2, Component tooltip) {
+            super(arg, arg2);
+            this.tooltip = Collections.singletonList(tooltip);
+        }
+
         @Override
         public void appendHoverText(ItemStack arg, @Nullable Level arg2, List<Component> list, TooltipFlag arg3) {
-            list.add(tooltip);
+            list.addAll(tooltip);
 
             // call superclass so blocks can add extra info, e.g. stored power/fluid
             super.appendHoverText(arg, arg2, list, arg3);

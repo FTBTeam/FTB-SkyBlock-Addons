@@ -1,5 +1,13 @@
-// 1.19.2	2024-02-07T15:29:25.340286	Block States: ftbsba
-44c77f4f45b3c162963b1bd55ce3364532392b36 assets/ftbsba/blockstates/diamond_auto_hammer.json
-feea77a065b8559d6347fc4af26dc563a0490db3 assets/ftbsba/blockstates/gold_auto_hammer.json
-33a2acda3b0348e90200100f2e9f28ad8ba3de3d assets/ftbsba/blockstates/iron_auto_hammer.json
-654e5f2f61b4cdd8aa679a11dda333a24218339d assets/ftbsba/blockstates/netherite_auto_hammer.json
+// 1.19.2	2024-02-14T23:36:33.901518	Block States: ftbsba
+833f135e5d8b4a2257a869d60a45280d53e801c3 assets/ftbsba/blockstates/diamond_auto_hammer.json
+988a346536ac5e74b5a2b0feacfecba556f8a004 assets/ftbsba/blockstates/fusing_machine.json
+d6eb3d81c87a0c5c24e2ea052dfb930bd4421f5b assets/ftbsba/blockstates/gold_auto_hammer.json
+243e8a848f6f380e852b3626d9924a6891a8bb4b assets/ftbsba/blockstates/iron_auto_hammer.json
+1864452a5613d373b25ecd6c2500b507d574890b assets/ftbsba/blockstates/netherite_auto_hammer.json
+01e3b76e7e76d7da82f5a5f675e3487a2187f542 assets/ftbsba/blockstates/super_cooler.json
+6738e9c33b60fca40869575ca969dc0cc4a7284f assets/ftbsba/models/block/fusing_machine.json
+76c5212b5b211d925d5fba066b663193dc5c4acc assets/ftbsba/models/block/fusing_machine_active.json
+731b6e5a69f8d4617cfc04d60e41cce6595901c7 assets/ftbsba/models/block/super_cooler.json
+62a76f07582f6bfdcf401c60d9758173d60202a1 assets/ftbsba/models/block/super_cooler_active.json
+9a0d530cd80ff11ccf25bc8e9637ea5faf95d56f assets/ftbsba/models/item/fusing_machine.json
+9bce202e8a29df5ee54ec1227d4c8cd766541786 assets/ftbsba/models/item/super_cooler.json

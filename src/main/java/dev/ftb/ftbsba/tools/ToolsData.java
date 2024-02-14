@@ -121,8 +121,8 @@ public class ToolsData {
             this.addBlock(ToolsRegistry.DIAMOND_AUTO_HAMMER, "Diamond Auto-hammer");
             this.addBlock(ToolsRegistry.NETHERITE_AUTO_HAMMER, "Netherite Auto-hammer");
 
-            this.addBlock(ToolsRegistry.FUSING_MACHINE, "Fusing Machine");
-            this.addBlock(ToolsRegistry.SUPER_COOLER, "Super Cooler");
+            this.addBlock(ToolsRegistry.FUSING_MACHINE, "SlowMelter 9000");
+            this.addBlock(ToolsRegistry.SUPER_COOLER, "\"Super\" Cooler");
 
             this.add("screens.ftbsba.select_start_group", "Select a group");
             this.add("screens.ftbsba.select_start", "Select a start");
@@ -138,9 +138,10 @@ public class ToolsData {
             this.add("ftbsba.tooltip.auto-hammers", "Automatically crushes materials down using the hammer based on the tier of hammer");
             this.add("ftbsba.tooltip.energy", "Energy: %s FE");
             this.add("ftbsba.tooltip.fluid", "Fluid: %smB %s");
+            this.add("ftbsba.tooltip.slowmelter", "This is what happens when 'The Boss' decides to get involved at the last minute.");
 
             this.add("ftbsba.tooltip.fusing_machine", "Used to fuse items together to produce new results");
-            this.add("ftbsba.tooltip.super_cooler", "Used to super-cool items to produce new results");
+            this.add("ftbsba.tooltip.super_cooler", "Used to \"super\"-cool items to produce new results");
 
             this.add("ftbsba.jade.waiting", "Waiting for input: %s ticks");
             this.add("ftbsba.jade.processing", "Processing: %s/%s");
@@ -148,11 +149,11 @@ public class ToolsData {
             this.add("ftbsba.jade.buffer", "Buffer");
 
             this.add("config.jade.plugin_ftbsba.blocks", "FTB Skyblock Addons Blocks");
-            this.add("container.ftbsba.super_cooler", "Super Cooler");
-            this.add("container.ftbsba.fusing_machine", "Fusing Machine");
+            this.add("container.ftbsba.super_cooler", "\"Super\" Cooler");
+            this.add("container.ftbsba.fusing_machine", "SlowMelter 9000");
 
-            this.add("ftbsba.jei.recipe.fusing", "Fusing");
-            this.add("ftbsba.jei.recipe.super_cooler", "Super Cooler");
+            this.add("ftbsba.jei.recipe.fusing", "SlowMelter 9000");
+            this.add("ftbsba.jei.recipe.super_cooler", "\"Super\" Cooling");
             this.add("ftbsba.jei.recipe.hammer", "Hammering");
             this.add("ftbsba.jei.recipe.crook", "Crooks");
         }
