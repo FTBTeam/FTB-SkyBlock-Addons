@@ -3,7 +3,6 @@ package dev.ftb.ftbsba.tools.integration.jei;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.recipies.FusingMachineRecipe;
-import dev.ftb.ftbsba.tools.recipies.HammerRecipe;
 import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
