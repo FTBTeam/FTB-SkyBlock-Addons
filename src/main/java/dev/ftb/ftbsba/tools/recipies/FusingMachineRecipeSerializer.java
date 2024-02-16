@@ -4,16 +4,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
+import java.util.List;
 
 public class FusingMachineRecipeSerializer implements RecipeSerializer<FusingMachineRecipe> {
     @Override
@@ -33,19 +30,15 @@ public class FusingMachineRecipeSerializer implements RecipeSerializer<FusingMac
     }
 
     @Override
-    public @Nullable FusingMachineRecipe fromNetwork(ResourceLocation arg, FriendlyByteBuf arg2) {
-        var groups = arg2.readUtf();
+    public @Nullable FusingMachineRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buf) {
+        var groups = buf.readUtf();
+        var recipe = new FusingMachineRecipe(recipeId, groups);
 
-        Ingredient[] ingredients = new Ingredient[3];
-        for (int i = 0; i < 3; i++) {
-            ingredients[i] = Ingredient.fromNetwork(arg2);
-        }
+        List<Ingredient> ingredients = buf.readList(Ingredient::fromNetwork);
+        FluidStack fluidResult = FluidStack.readFromPacket(buf);
+        SuperCoolerRecipe.EnergyComponent energyComponent = SuperCoolerRecipe.EnergyComponent.fromNetwork(buf);
 
-        FluidStack fluidResult = FluidStack.readFromPacket(arg2);
-        SuperCoolerRecipe.EnergyComponent energyComponent = SuperCoolerRecipe.EnergyComponent.fromNetwork(arg2);
-
-        var recipe = new FusingMachineRecipe(arg, groups);
-        Collections.addAll(recipe.ingredients, ingredients);
+        recipe.ingredients = ingredients;
         recipe.fluidResult = fluidResult;
         recipe.energyComponent = energyComponent;
 
@@ -53,15 +46,11 @@ public class FusingMachineRecipeSerializer implements RecipeSerializer<FusingMac
     }
 
     @Override
-    public void toNetwork(FriendlyByteBuf buffer, FusingMachineRecipe recipe) {
-        buffer.writeUtf(recipe.group);
-
-        for (Ingredient i : recipe.ingredients) {
-            i.toNetwork(buffer);
-        }
-
-        recipe.fluidResult.writeToPacket(buffer);
-        recipe.energyComponent.toNetwork(buffer);
+    public void toNetwork(FriendlyByteBuf buf, FusingMachineRecipe recipe) {
+        buf.writeUtf(recipe.group);
+        buf.writeCollection(recipe.ingredients, (buf1, ingredient) -> ingredient.toNetwork(buf1));
+        recipe.fluidResult.writeToPacket(buf);
+        recipe.energyComponent.toNetwork(buf);
     }
 
     public static class FluidStackSerializer {

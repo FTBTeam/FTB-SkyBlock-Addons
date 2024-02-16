@@ -4,15 +4,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.ShapedRecipe;
-import net.minecraftforge.fluids.FluidStack;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Arrays;
+import java.util.List;
 
 public class SuperCoolerRecipeSerializer implements RecipeSerializer<SuperCoolerRecipe> {
 
@@ -33,35 +30,27 @@ public class SuperCoolerRecipeSerializer implements RecipeSerializer<SuperCooler
     }
 
     @Override
-    public @Nullable SuperCoolerRecipe fromNetwork(ResourceLocation arg, FriendlyByteBuf arg2) {
-        var groups = arg2.readUtf();
+    public @Nullable SuperCoolerRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buf) {
+        var groups = buf.readUtf();
+        var recipe = new SuperCoolerRecipe(recipeId, groups);
 
-        Ingredient[] ingredients = new Ingredient[3];
-        for (int i = 0; i < 3; i++) {
-            ingredients[i] = Ingredient.fromNetwork(arg2);
-        }
+        List<Ingredient> ingredients = buf.readList(Ingredient::fromNetwork);
+        SuperCoolerRecipe.EnergyComponent energyComponent = SuperCoolerRecipe.EnergyComponent.fromNetwork(buf);
 
-        SuperCoolerRecipe.EnergyComponent energyComponent = SuperCoolerRecipe.EnergyComponent.fromNetwork(arg2);
-
-        var recipe = new SuperCoolerRecipe(arg, groups);
-        recipe.ingredients.addAll(Arrays.asList(ingredients));
+        recipe.ingredients.addAll(ingredients);
         recipe.energyComponent = energyComponent;
-        recipe.result = arg2.readItem();
-        recipe.fluidIngredient = arg2.readFluidStack();
+        recipe.result = buf.readItem();
+        recipe.fluidIngredient = buf.readFluidStack();
 
         return recipe;
     }
 
     @Override
-    public void toNetwork(FriendlyByteBuf arg, SuperCoolerRecipe arg2) {
-        arg.writeUtf(arg2.group);
-
-        for (Ingredient i : arg2.ingredients) {
-            i.toNetwork(arg);
-        }
-
-        arg2.energyComponent.toNetwork(arg);
-        arg.writeItem(arg2.result);
-        arg.writeFluidStack(arg2.fluidIngredient);
+    public void toNetwork(FriendlyByteBuf buf, SuperCoolerRecipe recipe) {
+        buf.writeUtf(recipe.group);
+        buf.writeCollection(recipe.ingredients, (buf1, ingredient) -> ingredient.toNetwork(buf1));
+        recipe.energyComponent.toNetwork(buf);
+        buf.writeItem(recipe.result);
+        buf.writeFluidStack(recipe.fluidIngredient);
     }
 }
