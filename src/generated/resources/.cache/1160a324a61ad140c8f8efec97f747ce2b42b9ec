@@ -1,0 +1,4 @@
+// 1.19.2	2024-02-07T15:29:25.34058	Global Loot Modifiers : ftbsba
+3654bb09969b06cc29a8322f1b2cc7416595ea6f data/forge/loot_modifiers/global_loot_modifiers.json
+fc28af48c265f03a878222d6b65a7ac3718e31dd data/ftbsba/loot_modifiers/crook_loot_modifier.json
+92c99d7dd9b113ed4bcd78a3ecf89a42560e38af data/ftbsba/loot_modifiers/hammer_loot_modifier.json

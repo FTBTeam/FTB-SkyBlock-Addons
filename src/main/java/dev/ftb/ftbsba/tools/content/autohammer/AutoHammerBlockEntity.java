@@ -1,6 +1,7 @@
 package dev.ftb.ftbsba.tools.content.autohammer;
 
 import dev.ftb.ftbsba.tools.ToolsRegistry;
+import dev.ftb.ftbsba.tools.content.core.AbstractMachineBlock;
 import dev.ftb.ftbsba.tools.recipies.ToolsRecipeCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -17,7 +18,6 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
@@ -94,12 +94,12 @@ public class AutoHammerBlockEntity extends BlockEntity {
         ItemStack inputStack = blockEntity.inputInventory.getStackInSlot(0);
         List<ItemStack> hammerDrops = ToolsRecipeCache.getHammerDrops(level, inputStack);
 
-        boolean isActive = state.getValue(AutoHammerBlock.ACTIVE);
+        boolean isActive = state.getValue(AbstractMachineBlock.ACTIVE);
         boolean shouldBeActive = blockEntity.inputHasItemsAndOutputIsClear(hammerDrops);
         if (shouldBeActive && !isActive) {
-            level.setBlock(pos, state.setValue(AutoHammerBlock.ACTIVE, true), 3);
+            level.setBlock(pos, state.setValue(AbstractMachineBlock.ACTIVE, true), 3);
         } else if(!shouldBeActive && isActive) {
-            level.setBlock(pos, state.setValue(AutoHammerBlock.ACTIVE, false), 3);
+            level.setBlock(pos, state.setValue(AbstractMachineBlock.ACTIVE, false), 3);
         }
 
         if (!blockEntity.processing) {

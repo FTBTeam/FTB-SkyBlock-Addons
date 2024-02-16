@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "ftbsba:block/super_cooler_front",
+    "side": "ftbsba:block/generic_machine_side",
+    "top": "ftbsba:block/super_cooler_top"
+  }
+}

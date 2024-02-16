@@ -3,9 +3,10 @@ package dev.ftb.ftbsba.tools;
 import com.google.common.collect.Lists;
 import com.mojang.datafixers.util.Pair;
 import dev.ftb.ftbsba.FTBSBA;
-import dev.ftb.ftbsba.tools.content.autohammer.AutoHammerBlock;
+import dev.ftb.ftbsba.tools.content.core.AbstractMachineBlock;
 import dev.ftb.ftbsba.tools.loot.CrookModifier;
 import dev.ftb.ftbsba.tools.loot.HammerModifier;
+import net.minecraft.Util;
 import net.minecraft.advancements.critereon.ItemPredicate;
 import net.minecraft.core.Direction;
 import net.minecraft.data.DataGenerator;
@@ -22,13 +23,21 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.LootTables;
 import net.minecraft.world.level.storage.loot.ValidationContext;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.CopyNameFunction;
+import net.minecraft.world.level.storage.loot.functions.CopyNbtFunction;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.predicates.ExplosionCondition;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.predicates.MatchTool;
+import net.minecraft.world.level.storage.loot.providers.nbt.ContextNbtProvider;
+import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraftforge.client.model.generators.*;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.data.ExistingFileHelper;
@@ -112,6 +121,9 @@ public class ToolsData {
             this.addBlock(ToolsRegistry.DIAMOND_AUTO_HAMMER, "Diamond Auto-hammer");
             this.addBlock(ToolsRegistry.NETHERITE_AUTO_HAMMER, "Netherite Auto-hammer");
 
+            this.addBlock(ToolsRegistry.FUSING_MACHINE, "SlowMelter 9000");
+            this.addBlock(ToolsRegistry.SUPER_COOLER, "\"Super\" Cooler");
+
             this.add("screens.ftbsba.select_start_group", "Select a group");
             this.add("screens.ftbsba.select_start", "Select a start");
             this.add("screens.ftbsba.selected_start", "Selected start");
@@ -124,6 +136,12 @@ public class ToolsData {
             this.add("ftbsba.tooltip.fireplow", "Hold right click whilst looking at Stone to create lava");
             this.add("ftbsba.tooltip.hammers", "Crushes materials down to their core components");
             this.add("ftbsba.tooltip.auto-hammers", "Automatically crushes materials down using the hammer based on the tier of hammer");
+            this.add("ftbsba.tooltip.energy", "Energy: %s FE");
+            this.add("ftbsba.tooltip.fluid", "Fluid: %smB %s");
+            this.add("ftbsba.tooltip.slowmelter", "This is what happens when 'The Boss' decides to get involved at the last minute.");
+
+            this.add("ftbsba.tooltip.fusing_machine", "Used to fuse items together to produce new results");
+            this.add("ftbsba.tooltip.super_cooler", "Used to \"super\"-cool items to produce new results");
 
             this.add("ftbsba.jade.waiting", "Waiting for input: %s ticks");
             this.add("ftbsba.jade.processing", "Processing: %s/%s");
@@ -131,10 +149,24 @@ public class ToolsData {
             this.add("ftbsba.jade.buffer", "Buffer");
 
             this.add("config.jade.plugin_ftbsba.blocks", "FTB Skyblock Addons Blocks");
+            this.add("container.ftbsba.super_cooler", "\"Super\" Cooler");
+            this.add("container.ftbsba.fusing_machine", "SlowMelter 9000");
+
+            this.add("ftbsba.jei.recipe.fusing", "SlowMelter 9000");
+            this.add("ftbsba.jei.recipe.super_cooler", "\"Super\" Cooling");
+            this.add("ftbsba.jei.recipe.hammer", "Hammering");
+            this.add("ftbsba.jei.recipe.crook", "Crooks");
         }
     }
 
     private static class SMBlockStateModels extends BlockStateProvider {
+        private static final List<DirRotation> HORIZONTALS = Util.make(new ArrayList<>(), l -> {
+            l.add(new DirRotation(Direction.NORTH, 0));
+            l.add(new DirRotation(Direction.EAST, 90));
+            l.add(new DirRotation(Direction.SOUTH, 180));
+            l.add(new DirRotation(Direction.WEST, 270));
+        });
+
         private final SMBlockModels blockModels;
 
         public SMBlockStateModels(DataGenerator generator, String modid, ExistingFileHelper existingFileHelper, SMBlockModels bm) {
@@ -149,25 +181,44 @@ public class ToolsData {
 
         @Override
         protected void registerStatesAndModels() {
-            Direction[] dirs = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
-            int[] dirsRot = {0, 180, 270, 90};
-
-            List<org.apache.commons.lang3.tuple.Pair<String, RegistryObject<Block>>> hammerTypes = new ArrayList<>() {{
-                add(org.apache.commons.lang3.tuple.Pair.of("iron", ToolsRegistry.IRON_AUTO_HAMMER));
-                add(org.apache.commons.lang3.tuple.Pair.of("gold", ToolsRegistry.GOLD_AUTO_HAMMER));
-                add(org.apache.commons.lang3.tuple.Pair.of("diamond", ToolsRegistry.DIAMOND_AUTO_HAMMER));
-                add(org.apache.commons.lang3.tuple.Pair.of("netherite", ToolsRegistry.NETHERITE_AUTO_HAMMER));
-            }};
-
-            for (org.apache.commons.lang3.tuple.Pair<String, RegistryObject<Block>> hammerType : hammerTypes) {
-                MultiPartBlockStateBuilder b = this.getMultipartBuilder(hammerType.getRight().get());
-                String path = hammerType.getRight().getId().getPath();
-                for (int d = 0; d < 4; d++) {
-                    b.part().modelFile(this.models().getExistingFile(this.modLoc("block/" + path))).rotationY(dirsRot[d]).addModel().condition(AutoHammerBlock.ACTIVE, false).condition(HORIZONTAL_FACING, dirs[d]);
-                    b.part().modelFile(this.models().getExistingFile(this.modLoc("block/" + path + "_active"))).rotationY(dirsRot[d]).addModel().condition(AutoHammerBlock.ACTIVE, true).condition(HORIZONTAL_FACING, dirs[d]);
+            for (var block : List.of(ToolsRegistry.IRON_AUTO_HAMMER, ToolsRegistry.GOLD_AUTO_HAMMER, ToolsRegistry.DIAMOND_AUTO_HAMMER, ToolsRegistry.NETHERITE_AUTO_HAMMER)) {
+                MultiPartBlockStateBuilder b = getMultipartBuilder(block.get());
+                String path = block.getId().getPath();
+                for (DirRotation d : HORIZONTALS) {
+                    b.part().modelFile(models().getExistingFile(modLoc("block/" + path)))
+                            .rotationY(d.rotation).addModel().condition(AbstractMachineBlock.ACTIVE, false)
+                            .condition(HORIZONTAL_FACING, d.direction);
+                    b.part().modelFile(models().getExistingFile(modLoc("block/" + path + "_active")))
+                            .rotationY(d.rotation).addModel().condition(AbstractMachineBlock.ACTIVE, true)
+                            .condition(HORIZONTAL_FACING, d.direction);
                 }
             }
+
+            for (var block: List.of(ToolsRegistry.FUSING_MACHINE, ToolsRegistry.SUPER_COOLER)) {
+                var model = machineModel(block, false);
+                var activeModel = machineModel(block, true);
+                VariantBlockStateBuilder.PartialBlockstate builder = getVariantBuilder(block.get()).partialState();
+                for (DirRotation d : HORIZONTALS) {
+                    builder.with(HORIZONTAL_FACING, d.direction).with(AbstractMachineBlock.ACTIVE, false)
+                            .setModels(new ConfiguredModel(model, 0, d.rotation, false));
+                    builder.with(HORIZONTAL_FACING, d.direction).with(AbstractMachineBlock.ACTIVE, true)
+                            .setModels(new ConfiguredModel(activeModel, 0, d.rotation, false));
+                }
+                simpleBlockItem(block.get(), model);
+            }
         }
+
+        private ModelFile machineModel(RegistryObject<Block> block, boolean active) {
+            String name = block.getId().getPath();
+            String suffix = active ? "_active" : "";
+            return models().withExistingParent(name + suffix, "block/orientable")
+                    .texture("top", modLoc("block/" + name + "_top" + suffix))
+                    .texture("side", modLoc("block/generic_machine_side"))
+                    .texture("front", modLoc("block/" + name + "_front" + suffix));
+        }
+    }
+
+    private record DirRotation(Direction direction, int rotation) {
     }
 
     private static class SMBlockModels extends BlockModelProvider {
@@ -311,6 +362,7 @@ public class ToolsData {
                     .define('T', top)
                     .define('C', center)
                     .save(consumer);
+
         }
 
         private void hammer(ItemLike output, TagKey<Item> head, Consumer<FinishedRecipe> consumer) {
@@ -361,6 +413,24 @@ public class ToolsData {
             dropSelf(ToolsRegistry.GOLD_AUTO_HAMMER.get());
             dropSelf(ToolsRegistry.DIAMOND_AUTO_HAMMER.get());
             dropSelf(ToolsRegistry.NETHERITE_AUTO_HAMMER.get());
+
+            preserveContents(ToolsRegistry.FUSING_MACHINE.get(), ToolsRegistry.FUSING_MACHINE_BLOCK_ENTITY.get());
+            preserveContents(ToolsRegistry.SUPER_COOLER.get(), ToolsRegistry.SUPER_COOLER_BLOCK_ENTITY.get());
+        }
+
+        private void preserveContents(Block block, BlockEntityType<?> blockEntity) {
+            LootPool.Builder builder = LootPool.lootPool()
+                    .when(ExplosionCondition.survivesExplosion())
+                    .setRolls(ConstantValue.exactly(1))
+                    .add(LootItem.lootTableItem(block)
+                            .apply(CopyNameFunction.copyName(CopyNameFunction.NameSource.BLOCK_ENTITY))
+                            .apply(CopyNbtFunction.copyData(ContextNbtProvider.BLOCK_ENTITY)
+                                    .copy("energy", "BlockEntityTag.energy", CopyNbtFunction.MergeStrategy.REPLACE)
+                                    .copy("fluid", "BlockEntityTag.fluid", CopyNbtFunction.MergeStrategy.REPLACE))
+//                            .apply(SetContainerContents.setContents(blockEntity)
+//                                    .withEntry(DynamicLoot.dynamicEntry(ShulkerBoxBlock.CONTENTS))));
+                    );
+            add(block, LootTable.lootTable().withPool(builder));
         }
 
         @Override
