@@ -1,11 +1,11 @@
 package dev.ftb.ftbsba.tools.content.fusion;
 
+import com.google.common.collect.Sets;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
 import dev.ftb.ftbsba.tools.content.core.*;
 import dev.ftb.ftbsba.tools.recipies.FusingMachineRecipe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,7 +23,10 @@ import net.minecraftforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.BitSet;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
@@ -49,7 +52,7 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
 
     @Override
     public void tickServer() {
-        if (!hasEnergy() || !hasOccupiedInputSlots()) {
+        if (!hasEnoughEnergy() || !hasOccupiedInputSlots()) {
             return;
         }
 
@@ -58,73 +61,65 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
             currentRecipe = RecipeCaches.FUSING_MACHINE.getCachedRecipe(this::findValidRecipe, itemHandler, null)
                     .orElse(null);
 
-            if (currentRecipe != null) {
-                // Test for tank validity
-                // TODO: Add fluid check
-                var tank = fluidHandler;
-                if (!tank.isEmpty() && !tank.getFluid().isFluidEqual(currentRecipe.fluidResult)) {
-                    setActive(false);
-                    return;
-                }
-
-                // Otherwise the fluid is either empty or the same as the recipe
-                if (!tank.isEmpty() && tank.getFluid().getAmount() + currentRecipe.fluidResult.getAmount() > tank.getCapacity()) {
-                    // Don't allow the fluid to overflow
-                    setActive(false);
-                    return;
-                }
-
-                // Finally, we can start the process
-                progressRequired = currentRecipe.energyComponent.ticksToProcess();
-                progress = 1; // Start the progress
-            } else {
+            if (currentRecipe == null || !fluidHandler.isEmpty() && !fluidHandler.getFluid().isFluidEqual(currentRecipe.fluidResult)) {
                 setActive(false);
+                return;
             }
+
+            // Good, we can start the process
+            progress = 1;
+            progressRequired = currentRecipe.energyComponent.ticksToProcess();
         }
 
         if (currentRecipe != null) {
-            if (progress == progressRequired) {
+            if (progress == progressRequired && canAcceptOutput()) {
                 // We're done... Output the result
-                extractRecipe();
-                breakProgress();
-            } else {
+                executeRecipe();
+            } else if (progress < progressRequired) {
                 setActive(true);
                 useEnergy();
-                progress ++;
+                progress++;
             }
         }
     }
 
+    private boolean canAcceptOutput() {
+        return currentRecipe != null && currentRecipe.fluidResult.getAmount() + fluidHandler.getFluidAmount() <= fluidHandler.getCapacity();
+    }
+
     //#region BlockEntity processing
 
-    private void extractRecipe() {
-        var inventory = itemHandler;
+    private void executeRecipe() {
+        Set<Ingredient> requiredItems = Sets.newIdentityHashSet();
+        requiredItems.addAll(currentRecipe.ingredients);
 
-        var requiredItems = this.currentRecipe.ingredients;
+        BitSet extractingSlots = new BitSet(itemHandler.getSlots());  // track which slots we need to extract from
+
         // Try and remove the items from the input slots
         for (var ingredient : requiredItems) {
-            for (int i = 0; i < inventory.getSlots(); i++) {
-                if (ingredient.test(inventory.getStackInSlot(i))) {
-                    if (inventory.extractItem(i, 1, true).isEmpty()) {
+            for (int i = 0; i < itemHandler.getSlots(); i++) {
+                if (!extractingSlots.get(i) && ingredient.test(itemHandler.getStackInSlot(i))) {
+                    if (itemHandler.extractItem(i, 1, true).isEmpty()) {
                         // this shouldn't happen, but let's be defensive
                         breakProgress();
                         currentRecipe = null;
                         return;
                     }
+                    extractingSlots.set(i);
                 }
             }
         }
 
-        for (var ingredient : requiredItems) {
-            for (int i = 0; i < inventory.getSlots(); i++) {
-                if (ingredient.test(inventory.getStackInSlot(i))) {
-                    // This logically can't be false due to the simulation above
-                    inventory.extractItem(i, 1, false);
+        if (extractingSlots.cardinality() == currentRecipe.ingredients.size()) {
+            for (int i = 0; i < itemHandler.getSlots(); i++) {
+                if (extractingSlots.get(i)) {
+                    itemHandler.extractItem(i, 1, false);
                 }
             }
+            fluidHandler.forceFill(this.currentRecipe.fluidResult, IFluidHandler.FluidAction.EXECUTE);
         }
 
-        fluidHandler.forceFill(this.currentRecipe.fluidResult, IFluidHandler.FluidAction.EXECUTE);
+        breakProgress();
     }
 
     private void useEnergy() {
@@ -146,8 +141,8 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
         this.progressRequired = 0;
     }
 
-    private boolean hasEnergy() {
-        return energyHandler.getEnergyStored() > 0;
+    private boolean hasEnoughEnergy() {
+        return energyHandler.getEnergyStored() > (currentRecipe == null ? 0 : currentRecipe.energyComponent.fePerTick());
     }
 
     private boolean hasOccupiedInputSlots() {
@@ -166,18 +161,27 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
     }
 
     private boolean recipeMatchesInput(FusingMachineRecipe recipe) {
-        NonNullList<Ingredient> foundIngredients = NonNullList.create();
+        Set<Ingredient> inputSet = Sets.newIdentityHashSet();
+        inputSet.addAll(recipe.ingredients);
+
+        int found = 0;
         for (int i = 0; i < itemHandler.getSlots(); i++) {
             if (!itemHandler.getStackInSlot(i).isEmpty()) {
-                for (Ingredient ingredient : recipe.ingredients) {
-                    if (ingredient.test(itemHandler.getStackInSlot(i))) {
-                        foundIngredients.add(ingredient);
+                Iterator<Ingredient> iter = inputSet.iterator();
+                while (iter.hasNext()) {
+                    Ingredient ingr = iter.next();
+                    if (ingr.test(itemHandler.getStackInSlot(i))) {
+                        iter.remove();
+                        found++;
+                        break;
                     }
+                }
+                if (found == recipe.ingredients.size()) {
+                    return true;
                 }
             }
         }
-
-        return foundIngredients.containsAll(recipe.ingredients);
+        return false;
     }
 
 //#endregion

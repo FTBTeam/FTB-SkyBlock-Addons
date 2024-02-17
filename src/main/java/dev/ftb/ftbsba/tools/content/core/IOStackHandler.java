@@ -33,7 +33,7 @@ public class IOStackHandler implements IItemHandler {
 
     @Override
     public @NotNull ItemStack extractItem(int i, int j, boolean bl) {
-        return i < input.getSlots() ? input.extractItem(i, j, bl) : output.extractItem(i - input.getSlots(), j, bl);
+        return i < input.getSlots() ? ItemStack.EMPTY : output.extractItem(i - input.getSlots(), j, bl);
     }
 
     @Override

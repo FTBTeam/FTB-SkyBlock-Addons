@@ -72,16 +72,18 @@ public class RecipeCaches {
         public Optional<R> getCachedRecipe(Supplier<Optional<R>> recipeFinder, IItemHandler itemHandler, IFluidHandler fluidHandler) {
             int key = keyGen.genHashKey(itemHandler, fluidHandler);
 
-            if (recipeCache.containsKey(key)) {
-                return recipeCache.getAndMoveToFirst(key);
-            } else {
-                Optional<R> newRecipe = recipeFinder.get();
-                while (recipeCache.size() >= MAX_CACHE_SIZE) {
-                    recipeCache.removeLast();
-                }
-                recipeCache.put(key, newRecipe);
-                return newRecipe;
-            }
+            return recipeFinder.get();
+
+//            if (recipeCache.containsKey(key)) {
+//                return recipeCache.getAndMoveToFirst(key);
+//            } else {
+//                Optional<R> newRecipe = recipeFinder.get();
+//                while (recipeCache.size() >= MAX_CACHE_SIZE) {
+//                    recipeCache.removeLast();
+//                }
+//                recipeCache.put(key, newRecipe);
+//                return newRecipe;
+//            }
         }
 
         private void clear() {
