@@ -232,6 +232,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
 
     private Optional<SuperCoolerRecipe> findValidRecipe() {
         return level.getRecipeManager().getAllRecipesFor(ToolsRegistry.SUPER_COOLER_RECIPE_TYPE.get()).stream()
+                .sorted((a, b) -> b.ingredients.size() - a.ingredients.size())  // prioritise recipes with more ingredients
                 .filter(this::recipeMatchesInput)
                 .findFirst();
     }

@@ -156,6 +156,7 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
 
     private Optional<FusingMachineRecipe> findValidRecipe() {
         return level.getRecipeManager().getAllRecipesFor(ToolsRegistry.FUSING_MACHINE_RECIPE_TYPE.get()).stream()
+                .sorted((a, b) -> b.ingredients.size() - a.ingredients.size()) // prioritise recipes with more ingredients
                 .filter(this::recipeMatchesInput)
                 .findFirst();
     }
