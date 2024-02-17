@@ -1,5 +1,6 @@
 package dev.ftb.ftbsba.tools.content.supercooler;
 
+import com.google.common.collect.Sets;
 import dev.ftb.ftbsba.tools.ToolsRegistry;
 import dev.ftb.ftbsba.tools.content.core.*;
 import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
@@ -14,8 +15,8 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -30,7 +31,10 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.BitSet;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Set;
 
 public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
     private static final Logger LOGGER = LoggerFactory.getLogger(SuperCoolerBlockEntity.class);
@@ -54,7 +58,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
 
     private int progress = 0;
     private int progressRequired = 0;
-    private SuperCoolerRecipe processingRecipe = null;
+    private SuperCoolerRecipe currentRecipe = null;
     private ResourceLocation pendingRecipeId = null;  // set when loading from NBT
     boolean tickLock = false;
 
@@ -73,7 +77,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
             return;
         }
 
-        if (!hasEnergy() || !hasFluid() || !hasItemInAnySlot()) {
+        if (!hasEnoughEnergy() || !hasAnyFluid() || !hasItemInAnySlot()) {
             setActive(false);
             progress = 0;
             return;
@@ -82,30 +86,31 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
         if (pendingRecipeId != null) {
             level.getServer().getRecipeManager().byKey(pendingRecipeId).ifPresent(r -> {
                 if (r instanceof SuperCoolerRecipe s) {
-                    processingRecipe = s;
+                    currentRecipe = s;
                 }
             });
             pendingRecipeId = null;
         }
 
         if (progress == 0) {
-            processingRecipe = RecipeCaches.SUPER_COOLER.getCachedRecipe(this::findValidRecipe, itemHandler, fluidHandler)
+            currentRecipe = RecipeCaches.SUPER_COOLER.getCachedRecipe(this::findValidRecipe, itemHandler, fluidHandler)
                     .orElse(null);
 
-            if (processingRecipe == null || !canAcceptOutput(processingRecipe)) {
+            ItemStack outputStack = itemHandler.getOutput().getStackInSlot(0);
+            if (currentRecipe == null || !outputStack.isEmpty() && !ItemHandlerHelper.canItemStacksStack(currentRecipe.result, outputStack)) {
                 setActive(false);
                 return;
             }
 
             progress = 1;
-            progressRequired = processingRecipe.energyComponent.ticksToProcess();
+            progressRequired = currentRecipe.energyComponent.ticksToProcess();
         }
 
-        if (processingRecipe != null) {
-            if (progress == progressRequired) {
+        if (currentRecipe != null) {
+            if (progress == progressRequired && canAcceptOutput(currentRecipe)) {
                 executeRecipe();
-            } else {
-                if (fluidHandler.getFluid().containsFluid(processingRecipe.fluidIngredient)) {
+            } else if (progress < progressRequired) {
+                if (fluidHandler.getFluid().containsFluid(currentRecipe.fluidIngredient)) {
                     // Use energy
                     setActive(true);
                     useEnergy();
@@ -116,61 +121,66 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
     }
 
     public void executeRecipe() {
-        if (this.processingRecipe == null) {
+        if (this.currentRecipe == null) {
             breakProgress();
             return;
         }
 
-        ItemStackHandler input = itemHandler.getInput();
-
         // Ensure enough fluid
-        if (!fluidHandler.getFluid().containsFluid(processingRecipe.fluidIngredient)) {
+        if (!fluidHandler.getFluid().containsFluid(currentRecipe.fluidIngredient)) {
             breakProgress();
             return;
         }
 
         // Ensure the items are OK
         // First test if we can extract the items by simulating and validating the result
-        var requiredItems = this.processingRecipe.ingredients;
+        Set<Ingredient> requiredItems = Sets.newIdentityHashSet();
+        requiredItems.addAll(currentRecipe.ingredients);
+
+        ItemStackHandler inputHandler = itemHandler.getInput();
+        BitSet extractingSlots = new BitSet(inputHandler.getSlots());  // track which slots we need to extract from
+
         for (var ingredient : requiredItems) {
-            for (int i = 0; i < input.getSlots(); i++) {
-                if (ingredient.test(input.getStackInSlot(i))) {
-                    if (input.extractItem(i, 1, true).isEmpty()) {
+            for (int i = 0; i < inputHandler.getSlots(); i++) {
+                if (!extractingSlots.get(i) && ingredient.test(inputHandler.getStackInSlot(i))) {
+                    if (inputHandler.extractItem(i, 1, true).isEmpty()) {
+                        // this shouldn't happen, but let's be defensive
                         breakProgress();
+                        currentRecipe = null;
                         return;
                     }
+                    extractingSlots.set(i);
                 }
             }
         }
 
-        // Consume the inputs
-        fluidHandler.drain(processingRecipe.fluidIngredient.getAmount(), IFluidHandler.FluidAction.EXECUTE);
-        for (var ingredient : requiredItems) {
-            for (int i = 0; i < input.getSlots(); i++) {
-                if (ingredient.test(input.getStackInSlot(i))) {
-                    // This logically can't be false due to the simulation above
-                    input.extractItem(i, 1, false);
+        // Consume inputs, produce output
+        if (extractingSlots.cardinality() == currentRecipe.ingredients.size()) {
+            fluidHandler.drain(currentRecipe.fluidIngredient.getAmount(), IFluidHandler.FluidAction.EXECUTE);
+
+            for (int i = 0; i < inputHandler.getSlots(); i++) {
+                if (extractingSlots.get(i)) {
+                    inputHandler.extractItem(i, 1, false);
                 }
             }
-        }
 
-        // Produce the result
-        itemHandler.getOutput().insertItem(0, this.processingRecipe.result.copy(), false);
-        breakProgress();
+            itemHandler.getOutput().insertItem(0, this.currentRecipe.result.copy(), false);
+            breakProgress();
+        }
     }
 
     private void useEnergy() {
-        if (this.processingRecipe == null) {
+        if (this.currentRecipe == null) {
             return;
         }
 
-        var result = energyHandler.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), true);
-        if (result < this.processingRecipe.energyComponent.fePerTick()) {
+        var result = energyHandler.extractEnergy(this.currentRecipe.energyComponent.fePerTick(), true);
+        if (result < this.currentRecipe.energyComponent.fePerTick()) {
             breakProgress();
             return;
         }
 
-        energyHandler.extractEnergy(this.processingRecipe.energyComponent.fePerTick(), false);
+        energyHandler.extractEnergy(this.currentRecipe.energyComponent.fePerTick(), false);
     }
 
     /**
@@ -179,7 +189,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
     private void breakProgress() {
         this.progress = 0;
         this.progressRequired = 0;
-        this.processingRecipe = null;
+        this.currentRecipe = null;
         this.tickLock = false;
     }
 
@@ -190,8 +200,10 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
             return true;
         }
 
+        int nItems = currentRecipe == null ? 0 : currentRecipe.result.getCount();
+
         // Do we have room for the result?
-        if (outputSlot.getCount() >= outputSlot.getMaxStackSize()) {
+        if (outputSlot.getCount() >= outputSlot.getMaxStackSize() - nItems) {
             return false;
         }
 
@@ -199,12 +211,12 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
         return ItemHandlerHelper.canItemStacksStack(outputSlot, recipe.result);
     }
 
-    private boolean hasFluid() {
+    private boolean hasAnyFluid() {
         return !fluidHandler.isEmpty();
     }
 
-    private boolean hasEnergy() {
-        return energyHandler.getEnergyStored() > 0;
+    private boolean hasEnoughEnergy() {
+        return energyHandler.getEnergyStored() > (currentRecipe == null ? 0 : currentRecipe.energyComponent.fePerTick());
     }
 
     private boolean hasItemInAnySlot() {
@@ -220,6 +232,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
 
     private Optional<SuperCoolerRecipe> findValidRecipe() {
         return level.getRecipeManager().getAllRecipesFor(ToolsRegistry.SUPER_COOLER_RECIPE_TYPE.get()).stream()
+                .sorted((a, b) -> b.ingredients.size() - a.ingredients.size())  // prioritise recipes with more ingredients
                 .filter(this::recipeMatchesInput)
                 .findFirst();
     }
@@ -229,18 +242,27 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
             return false;
         }
 
-        NonNullList<Ingredient> foundIngredients = NonNullList.create();
+        Set<Ingredient> inputSet = Sets.newIdentityHashSet();
+        inputSet.addAll(recipe.ingredients);
+
+        int found = 0;
         for (int i = 0; i < itemHandler.getSlots(); i++) {
             if (!itemHandler.getStackInSlot(i).isEmpty()) {
-                for (Ingredient ingredient : recipe.ingredients) {
-                    if (ingredient.test(itemHandler.getStackInSlot(i))) {
-                        foundIngredients.add(ingredient);
+                Iterator<Ingredient> iter = inputSet.iterator();
+                while (iter.hasNext()) {
+                    Ingredient ingr = iter.next();
+                    if (ingr.test(itemHandler.getStackInSlot(i))) {
+                        iter.remove();
+                        found++;
+                        break;
                     }
+                }
+                if (found == recipe.ingredients.size()) {
+                    return true;
                 }
             }
         }
-
-        return foundIngredients.containsAll(recipe.ingredients);
+        return false;
     }
 
     @Override
@@ -312,8 +334,8 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
         arg.putInt("progressRequired", this.progressRequired);
 
         // Write the recipe id
-        if (this.processingRecipe != null) {
-            arg.putString("recipe", this.processingRecipe.getId().toString());
+        if (this.currentRecipe != null) {
+            arg.putString("recipe", this.currentRecipe.getId().toString());
         }
     }
 
