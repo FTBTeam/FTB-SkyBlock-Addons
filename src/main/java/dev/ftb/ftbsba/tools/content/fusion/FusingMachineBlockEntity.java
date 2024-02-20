@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
-    private final EmittingEnergy energyHandler = new EmittingEnergy(100000, 10000, 10000, (energy) -> this.setChanged());
+    private final EmittingEnergy energyHandler = new EmittingEnergy(1_000_000, 10_000, 10_000, (energy) -> this.setChanged());
     private final ExtractOnlyFluidTank fluidHandler = new ExtractOnlyFluidTank(10000, (tank) -> this.setChanged());
     private final EmittingStackHandler itemHandler = new EmittingStackHandler(2, (contents) -> {
         this.setChanged();

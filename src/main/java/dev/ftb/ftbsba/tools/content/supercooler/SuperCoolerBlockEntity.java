@@ -39,7 +39,7 @@ import java.util.Set;
 public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
     private static final Logger LOGGER = LoggerFactory.getLogger(SuperCoolerBlockEntity.class);
 
-    private final EmittingEnergy energyHandler = new EmittingEnergy(100000, 10000, 10000, (energy) -> this.setChanged());
+    private final EmittingEnergy energyHandler = new EmittingEnergy(1_000_000, 10_000, 10_000, (energy) -> this.setChanged());
     private final EmittingFluidTank fluidHandler = new EmittingFluidTank(10000, (tank) -> this.setChanged());
     private final IOStackHandler itemHandler = new IOStackHandler(3, 1, (container, ioType) -> {
         setChanged();
