@@ -32,10 +32,7 @@ import java.util.function.Consumer;
 public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
     private final EmittingEnergy energyHandler = new EmittingEnergy(1_000_000, 10_000, 10_000, (energy) -> this.setChanged());
     private final ExtractOnlyFluidTank fluidHandler = new ExtractOnlyFluidTank(10000, (tank) -> this.setChanged());
-    private final EmittingStackHandler itemHandler = new EmittingStackHandler(2, (contents) -> {
-        this.setChanged();
-        this.progress = 0;
-    });
+    private final EmittingStackHandler itemHandler = new EmittingStackHandler(2, (contents) -> onItemHandlerChange());
 
     private final LazyOptional<EmittingEnergy> energy = LazyOptional.of(() -> energyHandler);
     private final LazyOptional<ExtractOnlyFluidTank> tank = LazyOptional.of(() -> fluidHandler);
@@ -43,6 +40,7 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
 
     private int progress = 0;
     private int progressRequired = 0;
+    private boolean recheckRecipe = false;
     private FusingMachineRecipe currentRecipe = null;
     private final FluidEnergyProcessorContainerData containerData = new FluidEnergyProcessorContainerData(this, this);
 
@@ -57,17 +55,20 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
         }
 
         // We need to find the recipe before we can check the fluid tank
-        if (progress == 0) {
+        if (recheckRecipe || progress == 0) {
+            recheckRecipe = false;
+
             currentRecipe = RecipeCaches.FUSING_MACHINE.getCachedRecipe(this::findValidRecipe, itemHandler, null)
                     .orElse(null);
 
             if (currentRecipe == null || !fluidHandler.isEmpty() && !fluidHandler.getFluid().isFluidEqual(currentRecipe.fluidResult)) {
+                progress = 0;
                 setActive(false);
                 return;
             }
 
             // Good, we can start the process
-            progress = 1;
+            progress = Math.max(1, progress);
             progressRequired = currentRecipe.energyComponent.ticksToProcess();
         }
 
@@ -80,6 +81,13 @@ public class FusingMachineBlockEntity extends AbstractMachineBlockEntity {
                 useEnergy();
                 progress++;
             }
+        }
+    }
+
+    private void onItemHandlerChange() {
+        if (!level.isClientSide) {
+            setChanged();
+            recheckRecipe = true;
         }
     }
 

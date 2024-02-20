@@ -7,7 +7,6 @@ import dev.ftb.ftbsba.tools.recipies.SuperCoolerRecipe;
 import net.minecraft.ResourceLocationException;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -15,7 +14,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -28,8 +26,6 @@ import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.BitSet;
 import java.util.Iterator;
@@ -37,18 +33,9 @@ import java.util.Optional;
 import java.util.Set;
 
 public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SuperCoolerBlockEntity.class);
-
     private final EmittingEnergy energyHandler = new EmittingEnergy(1_000_000, 10_000, 10_000, (energy) -> this.setChanged());
     private final EmittingFluidTank fluidHandler = new EmittingFluidTank(10000, (tank) -> this.setChanged());
-    private final IOStackHandler itemHandler = new IOStackHandler(3, 1, (container, ioType) -> {
-        setChanged();
-        if (ioType == IOStackHandler.IO.INPUT) {
-            if (this.progress > 0) {
-                this.progress = 0;
-            }
-        }
-    });
+    private final IOStackHandler itemHandler = new IOStackHandler(3, 1, (container, ioType) -> itemHandlerChanged(ioType));
 
     private final LazyOptional<EmittingEnergy> energy = LazyOptional.of(() -> energyHandler);
     private final LazyOptional<IFluidTank> tank = LazyOptional.of(() -> fluidHandler);
@@ -58,6 +45,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
 
     private int progress = 0;
     private int progressRequired = 0;
+    private boolean recheckRecipe = false;
     private SuperCoolerRecipe currentRecipe = null;
     private ResourceLocation pendingRecipeId = null;  // set when loading from NBT
     boolean tickLock = false;
@@ -69,6 +57,15 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
     @Override
     public IOStackHandler getItemHandler() {
         return itemHandler;
+    }
+
+    private void itemHandlerChanged(IOStackHandler.IO ioType) {
+        if (!level.isClientSide) {
+            setChanged();
+            if (ioType == IOStackHandler.IO.INPUT) {
+                recheckRecipe = true;
+            }
+        }
     }
 
     @Override
@@ -84,7 +81,7 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
         }
 
         if (pendingRecipeId != null) {
-            level.getServer().getRecipeManager().byKey(pendingRecipeId).ifPresent(r -> {
+            level.getRecipeManager().byKey(pendingRecipeId).ifPresent(r -> {
                 if (r instanceof SuperCoolerRecipe s) {
                     currentRecipe = s;
                 }
@@ -92,17 +89,19 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
             pendingRecipeId = null;
         }
 
-        if (progress == 0) {
+        if (recheckRecipe || progress == 0) {
+            recheckRecipe = false;
+
             currentRecipe = RecipeCaches.SUPER_COOLER.getCachedRecipe(this::findValidRecipe, itemHandler, fluidHandler)
                     .orElse(null);
 
-            ItemStack outputStack = itemHandler.getOutput().getStackInSlot(0);
-            if (currentRecipe == null || !outputStack.isEmpty() && !ItemHandlerHelper.canItemStacksStack(currentRecipe.result, outputStack)) {
+            if (currentRecipe == null) {
+                progress = 0;
                 setActive(false);
                 return;
             }
 
-            progress = 1;
+            progress = Math.max(1, progress);
             progressRequired = currentRecipe.energyComponent.ticksToProcess();
         }
 
@@ -115,6 +114,8 @@ public class SuperCoolerBlockEntity extends AbstractMachineBlockEntity {
                     setActive(true);
                     useEnergy();
                     progress++;
+                } else {
+                    setActive(false);
                 }
             }
         }
