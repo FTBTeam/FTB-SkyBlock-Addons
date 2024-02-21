@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* AutoHammer can not be disabled with a redstone signal 
+* AutoHammer can now be disabled with a redstone signal 
 
 ### Fixed
 
