@@ -53,7 +53,7 @@ public class HammerOverlay {
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent event) {
-        if (event.getOverlay().id().toString().equals("minecraft:chat_panel")) {
+        if (!event.getOverlay().id().toString().equals("minecraft:hotbar")) {
             return;
         }
 
@@ -66,6 +66,7 @@ public class HammerOverlay {
         if (!(mainHandItem.getItem() instanceof HammerItem)) {
             return;
         }
+
 
         HitResult pick = player.pick(ForgeMod.REACH_DISTANCE.get().getDefaultValue(), event.getPartialTick(), false);
         if (!(pick instanceof BlockHitResult blockHit)) {
@@ -111,10 +112,12 @@ public class HammerOverlay {
         }
 
         pose.popPose();
+        RenderSystem.disableBlend();
 
         renderItem(new ItemStack(player.level.getBlockState(blockHit.getBlockPos()).getBlock()), x + 3, y + 3);
 
         int index = Mth.clamp(player.tickCount % (CYCLE_RATE * recipeResults.size()) / CYCLE_RATE, 0, recipeResults.size() - 1);
+
         renderItem(recipeResults.get(index), x + (58 - 16) + 3, y + 3);
     }
 
