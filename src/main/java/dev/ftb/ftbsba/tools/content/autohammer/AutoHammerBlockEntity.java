@@ -83,6 +83,10 @@ public class AutoHammerBlockEntity extends BlockEntity {
             return;
         }
 
+        if (!blockEntity.getBlockState().getValue(BlockStateProperties.ENABLED)) {
+            return; // No tick if the block is disabled
+        }
+
         if (blockEntity.timeOut > 0) {
             blockEntity.timeOut--;
             return;

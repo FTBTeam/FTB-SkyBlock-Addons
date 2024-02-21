@@ -43,18 +43,21 @@ public class AutoHammerBlock extends Block implements EntityBlock {
 
         this.registerDefaultState(this.getStateDefinition().any()
                 .setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH)
-                .setValue(AbstractMachineBlock.ACTIVE, false));
+                .setValue(AbstractMachineBlock.ACTIVE, false)
+                .setValue(BlockStateProperties.ENABLED, true));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.HORIZONTAL_FACING, AbstractMachineBlock.ACTIVE);
+        builder.add(BlockStateProperties.HORIZONTAL_FACING, AbstractMachineBlock.ACTIVE, BlockStateProperties.ENABLED);
     }
 
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
+        return defaultBlockState()
+                .setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite())
+                .setValue(BlockStateProperties.ENABLED, true);
     }
 
     public VoxelShape getVisualShape(BlockState arg, BlockGetter arg2, BlockPos arg3, CollisionContext arg4) {
@@ -122,5 +125,35 @@ public class AutoHammerBlock extends Block implements EntityBlock {
     @Override
     public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(BlockStateProperties.HORIZONTAL_FACING)));
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onPlace(BlockState arg, Level arg2, BlockPos arg3, BlockState arg4, boolean bl) {
+        super.onPlace(arg, arg2, arg3, arg4, bl);
+        if (!arg4.is(arg.getBlock())) {
+            this.checkPoweredState(arg2, arg3, arg);
+        }
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void neighborChanged(BlockState arg, Level arg2, BlockPos arg3, Block arg4, BlockPos arg5, boolean bl) {
+        super.neighborChanged(arg, arg2, arg3, arg4, arg5, bl);
+        this.checkPoweredState(arg2, arg3, arg);
+    }
+
+    private void checkPoweredState(Level arg, BlockPos arg2, BlockState arg3) {
+        boolean hasSignal = !arg.hasNeighborSignal(arg2);
+        if (hasSignal != arg3.getValue(BlockStateProperties.ENABLED)) {
+            var state = arg3.setValue(BlockStateProperties.ENABLED, hasSignal);
+
+            // If the block is no longer enabled but is active, toggle the active state
+            if (!hasSignal && arg3.getValue(AbstractMachineBlock.ACTIVE)) {
+                state = state.setValue(AbstractMachineBlock.ACTIVE, false);
+            }
+
+            arg.setBlock(arg2, state, Block.UPDATE_ALL);
+        }
     }
 }
