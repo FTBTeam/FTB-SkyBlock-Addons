@@ -1,7 +1,6 @@
 package dev.ftb.ftbsba.tools;
 
 import com.mojang.serialization.Codec;
-import dev.architectury.registry.registries.RegistrySupplier;
 import dev.ftb.ftbsba.FTBSBA;
 import dev.ftb.ftbsba.tools.content.CrookItem;
 import dev.ftb.ftbsba.tools.content.HammerItem;

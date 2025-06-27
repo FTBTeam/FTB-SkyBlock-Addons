@@ -37,7 +37,8 @@ loom {
 
 repositories {
 	maven { url "https://www.cursemaven.com" }
-	maven { url "https://maven.saps.dev/releases" }
+	maven { url "https://maven.ftb.dev/releases" }
+	maven { url "https://maven.latvian.dev/releases" }
 	maven { url "https://maven.architectury.dev/" }
 	maven {
 		url "https://maven.blamejared.com"
@@ -65,9 +66,8 @@ dependencies {
 	modCompileOnly("mezz.jei:jei-${project.minecraft_version}-forge-api:${project.jei_version}")
 
 //	modRuntimeOnly("dev.emi:emi-forge:1.1.0+${project.minecraft_version}")
-
-	modImplementation("dev.latvian.mods:kubejs-forge:${kubejs_version}")
-	modImplementation("dev.latvian.mods:rhino-forge:${rhino_version}")
+	modCompileOnly("dev.latvian.mods:kubejs-forge:${kubejs_version}") { transitive = false }
+//	modImplementation("dev.latvian.mods:rhino-forge:${rhino_version}")
 
 	modImplementation ("curse.maven:jade-324717:${jade_version}")
 	modRuntimeOnly("curse.maven:cyclic-239286:4660268")
@@ -81,6 +81,12 @@ processResources {
 
 	filesMatching("META-INF/mods.toml") {
 		expand "version": project.version
+	}
+}
+
+configurations.all {
+	resolutionStrategy {
+		force 'io.github.llamalad7.mixinextras:mixinextras-common:0.4.1'
 	}
 }
 
