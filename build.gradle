@@ -1,5 +1,5 @@
 plugins {
-	id "dev.architectury.loom" version "0.12.0-SNAPSHOT"
+	id "dev.architectury.loom" version "1.10-SNAPSHOT"
 	id "maven-publish"
 	id "com.matthewprenger.cursegradle" version "1.4.0"
 }
@@ -15,22 +15,27 @@ group = project.maven_group
 // needs to be done AFTER version is set
 apply from: "https://raw.githubusercontent.com/FTBTeam/mods-meta/main/gradle/publishing.gradle"
 
+def generatedResources = file("src/generated/resources")
+
+sourceSets {
+	main {
+		resources.srcDir generatedResources
+	}
+}
+
 loom {
 	silentMojangMappingsLicense()
 
 	forge {
-		mixinConfigs = [
-//                "ftbsba.mixins.json"
-		]
-
-		dataGen {
-			mod project.mod_id
-		}
+		mixinConfig "ftbsba.mixins.json"
 	}
 
-	launches {
+	runs {
 		data {
-			arg "--existing", file("src/main/resources").absolutePath
+			data()
+			programArgs "--all", "--mod", "ftbsba"
+			programArgs "--output", generatedResources.absolutePath
+			programArgs "--existing", file("src/main/resources").absolutePath
 		}
 	}
 }
@@ -65,9 +70,9 @@ dependencies {
 	modCompileOnly("mezz.jei:jei-${project.minecraft_version}-common-api:${project.jei_version}")
 	modCompileOnly("mezz.jei:jei-${project.minecraft_version}-forge-api:${project.jei_version}")
 
-//	modRuntimeOnly("dev.emi:emi-forge:1.1.0+${project.minecraft_version}")
-	modCompileOnly("dev.latvian.mods:kubejs-forge:${kubejs_version}") { transitive = false }
-//	modImplementation("dev.latvian.mods:rhino-forge:${rhino_version}")
+	modImplementation("dev.latvian.mods:kubejs-forge:${kubejs_version}") { transitive = false }
+	modImplementation("dev.latvian.mods:rhino-forge:${rhino_version}")
+	modRuntimeOnly("dev.architectury:architectury-forge:6.5.82")
 
 	modImplementation ("curse.maven:jade-324717:${jade_version}")
 	modRuntimeOnly("curse.maven:cyclic-239286:4660268")
